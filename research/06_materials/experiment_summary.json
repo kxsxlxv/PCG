@@ -1,0 +1,83 @@
+{
+  "resolution": 512,
+  "material_count": 8,
+  "map_count": 32,
+  "png_map_bytes": 6853716,
+  "normal_max_length_error": 2.220446049250313e-16,
+  "seam_height_step_ratio_yx": {
+    "plaster_cream": [
+      0.9444430090169487,
+      1.017915145742599
+    ],
+    "plaster_white": [
+      0.9373285443210693,
+      0.9458710537218045
+    ],
+    "red_brick": [
+      0.1993209934318522,
+      0.4213055451905285
+    ],
+    "concrete_panel": [
+      1.0161106908072168,
+      0.8976107570865265
+    ],
+    "stone_plinth": [
+      0.36536656910825543,
+      0.5213204149378797
+    ],
+    "metal_roof_red": [
+      0.855147557092865,
+      0.12511228556871593
+    ],
+    "ceramic_roof": [
+      0.4244217732445303,
+      0.5191542642180019
+    ],
+    "bitumen_roof": [
+      0.9296521740714414,
+      1.0274899480487478
+    ]
+  },
+  "facade": {
+    "windows": 48,
+    "lit": 21,
+    "mean_linear_emissive": [
+      0.06385348097874553,
+      0.04824711998659748,
+      0.03257717742211072
+    ],
+    "mip_mean_error": 3.851086116668512e-15
+  },
+  "memory_model": [
+    {
+      "size": 512,
+      "layers": 32,
+      "three_maps_mib": 32.00244140625,
+      "with_height_mib": 37.336181640625
+    },
+    {
+      "size": 1024,
+      "layers": 32,
+      "three_maps_mib": 128.00244140625,
+      "with_height_mib": 149.336181640625
+    },
+    {
+      "size": 2048,
+      "layers": 32,
+      "three_maps_mib": 512.00244140625,
+      "with_height_mib": 597.336181640625
+    },
+    {
+      "size": 4096,
+      "layers": 32,
+      "three_maps_mib": 2048.00244140625,
+      "with_height_mib": 2389.336181640625
+    }
+  ],
+  "source_git_blob": "a1579299043e825cebca9dd76fa82c2878b07c9d",
+  "limitations": [
+    "synthetic texture probe",
+    "no GPU/SDK validation",
+    "no compression or actual PBR render"
+  ]
+}
