@@ -1,0 +1,2478 @@
+{
+  "tested_meshes": 120,
+  "recipes": 40,
+  "default_triangles": [
+    1780,
+    812,
+    172
+  ],
+  "default_stats": [
+    {
+      "kind": "casement_window",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 5,
+          "min": [
+            -0.81,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.81,
+            1.35,
+            0.165
+          ]
+        },
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 3,
+          "min": [
+            -0.81,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.81,
+            1.35,
+            0.165
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.75,
+            0,
+            0
+          ],
+          "max": [
+            0.75,
+            1.35,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sliding_door",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 204,
+          "vertices": 408,
+          "material_slots": 5,
+          "min": [
+            -1.2,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.2,
+            2.15,
+            0.1175
+          ]
+        },
+        {
+          "triangles": 120,
+          "vertices": 240,
+          "material_slots": 3,
+          "min": [
+            -1.2,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.2,
+            2.15,
+            0.1
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -1.2,
+            0,
+            0
+          ],
+          "max": [
+            1.2,
+            2.15,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "open_balcony",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 444,
+          "vertices": 888,
+          "material_slots": 2,
+          "min": [
+            -1.3525000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.3525000000000003,
+            1.21,
+            1.1
+          ]
+        },
+        {
+          "triangles": 168,
+          "vertices": 336,
+          "material_slots": 2,
+          "min": [
+            -1.3525000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.3525000000000003,
+            1.21,
+            1.1
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            1.21,
+            1.1
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "glazed_balcony",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 240,
+          "vertices": 480,
+          "material_slots": 6,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            2.39,
+            1.1275000000000002
+          ]
+        },
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 4,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            2.39,
+            1.1
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            2.31,
+            1.1
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "ac_unit",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 308,
+          "vertices": 576,
+          "material_slots": 3,
+          "min": [
+            -0.41,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.41,
+            0.65,
+            0.395
+          ]
+        },
+        {
+          "triangles": 92,
+          "vertices": 168,
+          "material_slots": 3,
+          "min": [
+            -0.41,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.41,
+            0.65,
+            0.383
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.41,
+            0.09,
+            0.04000000000000001
+          ],
+          "max": [
+            0.41,
+            0.65,
+            0.35
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "chimney",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 72,
+          "vertices": 144,
+          "material_slots": 3,
+          "min": [
+            -0.34,
+            0,
+            -0.34
+          ],
+          "max": [
+            0.34,
+            1.345,
+            0.34
+          ]
+        },
+        {
+          "triangles": 36,
+          "vertices": 72,
+          "material_slots": 3,
+          "min": [
+            -0.34,
+            0,
+            -0.34
+          ],
+          "max": [
+            0.34,
+            1.155,
+            0.34
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -0.34,
+            0,
+            -0.34
+          ],
+          "max": [
+            0.34,
+            1.1400000000000001,
+            0.34
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "roof_vent",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 260,
+          "vertices": 456,
+          "material_slots": 2,
+          "min": [
+            -0.24,
+            0,
+            -0.24
+          ],
+          "max": [
+            0.24,
+            0.72,
+            0.24
+          ]
+        },
+        {
+          "triangles": 84,
+          "vertices": 144,
+          "material_slots": 2,
+          "min": [
+            -0.24,
+            0,
+            -0.24
+          ],
+          "max": [
+            0.24,
+            0.72,
+            0.24
+          ]
+        },
+        {
+          "triangles": 52,
+          "vertices": 96,
+          "material_slots": 2,
+          "min": [
+            -0.24,
+            0,
+            -0.24
+          ],
+          "max": [
+            0.24,
+            0.72,
+            0.24
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "entrance_door",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 4,
+          "min": [
+            -0.575,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.575,
+            2.15,
+            0.1325
+          ]
+        },
+        {
+          "triangles": 60,
+          "vertices": 120,
+          "material_slots": 3,
+          "min": [
+            -0.575,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.575,
+            2.15,
+            0.095
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.575,
+            0,
+            0
+          ],
+          "max": [
+            0.575,
+            2.15,
+            0.09
+          ]
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "finite attributes",
+    "valid indices",
+    "non-degenerate triangles",
+    "winding matches face normal",
+    "unit normals",
+    "non-degenerate per-triangle UV",
+    "exact deterministic re-generation",
+    "non-increasing triangles per LOD"
+  ],
+  "limitations": [
+    "overlapping primitive assemblies, not watertight union",
+    "no external glTF validator/import test",
+    "no baking, tangents, textures or physically transparent glass",
+    "LOD envelopes not strictly matched",
+    "no performance benchmark"
+  ],
+  "tests": [
+    {
+      "kind": "casement_window",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 5,
+          "min": [
+            -0.6599999999999999,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.6599999999999999,
+            1.25,
+            0.165
+          ]
+        },
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 3,
+          "min": [
+            -0.6599999999999999,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.6599999999999999,
+            1.25,
+            0.165
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.6,
+            0,
+            0
+          ],
+          "max": [
+            0.6,
+            1.25,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "casement_window",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 5,
+          "min": [
+            -0.7350000000000001,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.7350000000000001,
+            1.3,
+            0.165
+          ]
+        },
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 3,
+          "min": [
+            -0.7350000000000001,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.7350000000000001,
+            1.3,
+            0.165
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.675,
+            0,
+            0
+          ],
+          "max": [
+            0.675,
+            1.3,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "casement_window",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 5,
+          "min": [
+            -0.81,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.81,
+            1.35,
+            0.165
+          ]
+        },
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 3,
+          "min": [
+            -0.81,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.81,
+            1.35,
+            0.165
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.75,
+            0,
+            0
+          ],
+          "max": [
+            0.75,
+            1.35,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "casement_window",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 5,
+          "min": [
+            -0.885,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.885,
+            1.4000000000000001,
+            0.165
+          ]
+        },
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 3,
+          "min": [
+            -0.885,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.885,
+            1.4000000000000001,
+            0.165
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.825,
+            0,
+            0
+          ],
+          "max": [
+            0.825,
+            1.4000000000000001,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "casement_window",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 5,
+          "min": [
+            -0.96,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.96,
+            1.4500000000000002,
+            0.165
+          ]
+        },
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 3,
+          "min": [
+            -0.96,
+            0,
+            -0.035
+          ],
+          "max": [
+            0.96,
+            1.4500000000000002,
+            0.165
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.9,
+            0,
+            0
+          ],
+          "max": [
+            0.9,
+            1.4500000000000002,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sliding_door",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 204,
+          "vertices": 408,
+          "material_slots": 5,
+          "min": [
+            -1.05,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.05,
+            2.15,
+            0.1175
+          ]
+        },
+        {
+          "triangles": 120,
+          "vertices": 240,
+          "material_slots": 3,
+          "min": [
+            -1.05,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.05,
+            2.15,
+            0.1
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -1.05,
+            0,
+            0
+          ],
+          "max": [
+            1.05,
+            2.15,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sliding_door",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 204,
+          "vertices": 408,
+          "material_slots": 5,
+          "min": [
+            -1.125,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.125,
+            2.15,
+            0.1175
+          ]
+        },
+        {
+          "triangles": 120,
+          "vertices": 240,
+          "material_slots": 3,
+          "min": [
+            -1.125,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.125,
+            2.15,
+            0.1
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -1.125,
+            0,
+            0
+          ],
+          "max": [
+            1.125,
+            2.15,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sliding_door",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 204,
+          "vertices": 408,
+          "material_slots": 5,
+          "min": [
+            -1.2,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.2,
+            2.15,
+            0.1175
+          ]
+        },
+        {
+          "triangles": 120,
+          "vertices": 240,
+          "material_slots": 3,
+          "min": [
+            -1.2,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.2,
+            2.15,
+            0.1
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -1.2,
+            0,
+            0
+          ],
+          "max": [
+            1.2,
+            2.15,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sliding_door",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 204,
+          "vertices": 408,
+          "material_slots": 5,
+          "min": [
+            -1.275,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.275,
+            2.15,
+            0.1175
+          ]
+        },
+        {
+          "triangles": 120,
+          "vertices": 240,
+          "material_slots": 3,
+          "min": [
+            -1.275,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.275,
+            2.15,
+            0.1
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -1.275,
+            0,
+            0
+          ],
+          "max": [
+            1.275,
+            2.15,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sliding_door",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 204,
+          "vertices": 408,
+          "material_slots": 5,
+          "min": [
+            -1.3499999999999999,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.3499999999999999,
+            2.15,
+            0.1175
+          ]
+        },
+        {
+          "triangles": 120,
+          "vertices": 240,
+          "material_slots": 3,
+          "min": [
+            -1.3499999999999999,
+            0,
+            -0.019999999999999997
+          ],
+          "max": [
+            1.3499999999999999,
+            2.15,
+            0.1
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -1.3499999999999999,
+            0,
+            0
+          ],
+          "max": [
+            1.3499999999999999,
+            2.15,
+            0.07
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "open_balcony",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 396,
+          "vertices": 792,
+          "material_slots": 2,
+          "min": [
+            -1.1025000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.1025000000000003,
+            1.21,
+            0.9800000000000001
+          ]
+        },
+        {
+          "triangles": 168,
+          "vertices": 336,
+          "material_slots": 2,
+          "min": [
+            -1.1025000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.1025000000000003,
+            1.21,
+            0.9800000000000001
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.1,
+            0,
+            0
+          ],
+          "max": [
+            1.1,
+            1.21,
+            0.9800000000000001
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "open_balcony",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 420,
+          "vertices": 840,
+          "material_slots": 2,
+          "min": [
+            -1.2275000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.2275000000000003,
+            1.21,
+            1.04
+          ]
+        },
+        {
+          "triangles": 168,
+          "vertices": 336,
+          "material_slots": 2,
+          "min": [
+            -1.2275000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.2275000000000003,
+            1.21,
+            1.04
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.225,
+            0,
+            0
+          ],
+          "max": [
+            1.225,
+            1.21,
+            1.04
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "open_balcony",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 444,
+          "vertices": 888,
+          "material_slots": 2,
+          "min": [
+            -1.3525000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.3525000000000003,
+            1.21,
+            1.1
+          ]
+        },
+        {
+          "triangles": 168,
+          "vertices": 336,
+          "material_slots": 2,
+          "min": [
+            -1.3525000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.3525000000000003,
+            1.21,
+            1.1
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            1.21,
+            1.1
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "open_balcony",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 468,
+          "vertices": 936,
+          "material_slots": 2,
+          "min": [
+            -1.4775000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.4775000000000003,
+            1.21,
+            1.1600000000000001
+          ]
+        },
+        {
+          "triangles": 168,
+          "vertices": 336,
+          "material_slots": 2,
+          "min": [
+            -1.4775000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.4775000000000003,
+            1.21,
+            1.1600000000000001
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.475,
+            0,
+            0
+          ],
+          "max": [
+            1.475,
+            1.21,
+            1.1600000000000001
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "open_balcony",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 480,
+          "vertices": 960,
+          "material_slots": 2,
+          "min": [
+            -1.6025000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.6025000000000003,
+            1.21,
+            1.2200000000000002
+          ]
+        },
+        {
+          "triangles": 168,
+          "vertices": 336,
+          "material_slots": 2,
+          "min": [
+            -1.6025000000000003,
+            0,
+            0
+          ],
+          "max": [
+            1.6025000000000003,
+            1.21,
+            1.2200000000000002
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.6,
+            0,
+            0
+          ],
+          "max": [
+            1.6,
+            1.21,
+            1.2200000000000002
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "glazed_balcony",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 240,
+          "vertices": 480,
+          "material_slots": 6,
+          "min": [
+            -1.1,
+            0,
+            0
+          ],
+          "max": [
+            1.1,
+            2.39,
+            1.0075
+          ]
+        },
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 4,
+          "min": [
+            -1.1,
+            0,
+            0
+          ],
+          "max": [
+            1.1,
+            2.39,
+            0.9800000000000001
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.1,
+            0,
+            0
+          ],
+          "max": [
+            1.1,
+            2.31,
+            0.9800000000000001
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "glazed_balcony",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 240,
+          "vertices": 480,
+          "material_slots": 6,
+          "min": [
+            -1.225,
+            0,
+            0
+          ],
+          "max": [
+            1.225,
+            2.39,
+            1.0675
+          ]
+        },
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 4,
+          "min": [
+            -1.225,
+            0,
+            0
+          ],
+          "max": [
+            1.225,
+            2.39,
+            1.04
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.225,
+            0,
+            0
+          ],
+          "max": [
+            1.225,
+            2.31,
+            1.04
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "glazed_balcony",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 240,
+          "vertices": 480,
+          "material_slots": 6,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            2.39,
+            1.1275000000000002
+          ]
+        },
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 4,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            2.39,
+            1.1
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.35,
+            0,
+            0
+          ],
+          "max": [
+            1.35,
+            2.31,
+            1.1
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "glazed_balcony",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 240,
+          "vertices": 480,
+          "material_slots": 6,
+          "min": [
+            -1.475,
+            0,
+            0
+          ],
+          "max": [
+            1.475,
+            2.39,
+            1.1875000000000002
+          ]
+        },
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 4,
+          "min": [
+            -1.475,
+            0,
+            0
+          ],
+          "max": [
+            1.475,
+            2.39,
+            1.1600000000000001
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.475,
+            0,
+            0
+          ],
+          "max": [
+            1.475,
+            2.31,
+            1.1600000000000001
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "glazed_balcony",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 240,
+          "vertices": 480,
+          "material_slots": 6,
+          "min": [
+            -1.6,
+            0,
+            0
+          ],
+          "max": [
+            1.6,
+            2.39,
+            1.2475000000000003
+          ]
+        },
+        {
+          "triangles": 156,
+          "vertices": 312,
+          "material_slots": 4,
+          "min": [
+            -1.6,
+            0,
+            0
+          ],
+          "max": [
+            1.6,
+            2.39,
+            1.2200000000000002
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -1.6,
+            0,
+            0
+          ],
+          "max": [
+            1.6,
+            2.31,
+            1.2200000000000002
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "ac_unit",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 308,
+          "vertices": 576,
+          "material_slots": 3,
+          "min": [
+            -0.35,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.35,
+            0.65,
+            0.395
+          ]
+        },
+        {
+          "triangles": 92,
+          "vertices": 168,
+          "material_slots": 3,
+          "min": [
+            -0.35,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.35,
+            0.65,
+            0.383
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.35,
+            0.09,
+            0.04000000000000001
+          ],
+          "max": [
+            0.35,
+            0.65,
+            0.35
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "ac_unit",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 308,
+          "vertices": 576,
+          "material_slots": 3,
+          "min": [
+            -0.38,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.38,
+            0.65,
+            0.395
+          ]
+        },
+        {
+          "triangles": 92,
+          "vertices": 168,
+          "material_slots": 3,
+          "min": [
+            -0.38,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.38,
+            0.65,
+            0.383
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.38,
+            0.09,
+            0.04000000000000001
+          ],
+          "max": [
+            0.38,
+            0.65,
+            0.35
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "ac_unit",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 308,
+          "vertices": 576,
+          "material_slots": 3,
+          "min": [
+            -0.41,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.41,
+            0.65,
+            0.395
+          ]
+        },
+        {
+          "triangles": 92,
+          "vertices": 168,
+          "material_slots": 3,
+          "min": [
+            -0.41,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.41,
+            0.65,
+            0.383
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.41,
+            0.09,
+            0.04000000000000001
+          ],
+          "max": [
+            0.41,
+            0.65,
+            0.35
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "ac_unit",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 308,
+          "vertices": 576,
+          "material_slots": 3,
+          "min": [
+            -0.43999999999999995,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.43999999999999995,
+            0.65,
+            0.395
+          ]
+        },
+        {
+          "triangles": 92,
+          "vertices": 168,
+          "material_slots": 3,
+          "min": [
+            -0.43999999999999995,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.43999999999999995,
+            0.65,
+            0.383
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.43999999999999995,
+            0.09,
+            0.04000000000000001
+          ],
+          "max": [
+            0.43999999999999995,
+            0.65,
+            0.35
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "ac_unit",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 308,
+          "vertices": 576,
+          "material_slots": 3,
+          "min": [
+            -0.47,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.47,
+            0.65,
+            0.395
+          ]
+        },
+        {
+          "triangles": 92,
+          "vertices": 168,
+          "material_slots": 3,
+          "min": [
+            -0.47,
+            0,
+            -0.04000000000000001
+          ],
+          "max": [
+            0.47,
+            0.65,
+            0.383
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.47,
+            0.09,
+            0.04000000000000001
+          ],
+          "max": [
+            0.47,
+            0.65,
+            0.35
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "chimney",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 72,
+          "vertices": 144,
+          "material_slots": 3,
+          "min": [
+            -0.29500000000000004,
+            0,
+            -0.29500000000000004
+          ],
+          "max": [
+            0.29500000000000004,
+            1.165,
+            0.29500000000000004
+          ]
+        },
+        {
+          "triangles": 36,
+          "vertices": 72,
+          "material_slots": 3,
+          "min": [
+            -0.29500000000000004,
+            0,
+            -0.29500000000000004
+          ],
+          "max": [
+            0.29500000000000004,
+            0.9750000000000001,
+            0.29500000000000004
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -0.29500000000000004,
+            0,
+            -0.29500000000000004
+          ],
+          "max": [
+            0.29500000000000004,
+            0.9600000000000001,
+            0.29500000000000004
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "chimney",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 72,
+          "vertices": 144,
+          "material_slots": 3,
+          "min": [
+            -0.3175,
+            0,
+            -0.3175
+          ],
+          "max": [
+            0.3175,
+            1.255,
+            0.3175
+          ]
+        },
+        {
+          "triangles": 36,
+          "vertices": 72,
+          "material_slots": 3,
+          "min": [
+            -0.3175,
+            0,
+            -0.3175
+          ],
+          "max": [
+            0.3175,
+            1.065,
+            0.3175
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -0.3175,
+            0,
+            -0.3175
+          ],
+          "max": [
+            0.3175,
+            1.05,
+            0.3175
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "chimney",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 72,
+          "vertices": 144,
+          "material_slots": 3,
+          "min": [
+            -0.34,
+            0,
+            -0.34
+          ],
+          "max": [
+            0.34,
+            1.345,
+            0.34
+          ]
+        },
+        {
+          "triangles": 36,
+          "vertices": 72,
+          "material_slots": 3,
+          "min": [
+            -0.34,
+            0,
+            -0.34
+          ],
+          "max": [
+            0.34,
+            1.155,
+            0.34
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -0.34,
+            0,
+            -0.34
+          ],
+          "max": [
+            0.34,
+            1.1400000000000001,
+            0.34
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "chimney",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 72,
+          "vertices": 144,
+          "material_slots": 3,
+          "min": [
+            -0.36250000000000004,
+            0,
+            -0.36250000000000004
+          ],
+          "max": [
+            0.36250000000000004,
+            1.435,
+            0.36250000000000004
+          ]
+        },
+        {
+          "triangles": 36,
+          "vertices": 72,
+          "material_slots": 3,
+          "min": [
+            -0.36250000000000004,
+            0,
+            -0.36250000000000004
+          ],
+          "max": [
+            0.36250000000000004,
+            1.245,
+            0.36250000000000004
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -0.36250000000000004,
+            0,
+            -0.36250000000000004
+          ],
+          "max": [
+            0.36250000000000004,
+            1.2300000000000002,
+            0.36250000000000004
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "chimney",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 72,
+          "vertices": 144,
+          "material_slots": 3,
+          "min": [
+            -0.385,
+            0,
+            -0.385
+          ],
+          "max": [
+            0.385,
+            1.525,
+            0.385
+          ]
+        },
+        {
+          "triangles": 36,
+          "vertices": 72,
+          "material_slots": 3,
+          "min": [
+            -0.385,
+            0,
+            -0.385
+          ],
+          "max": [
+            0.385,
+            1.335,
+            0.385
+          ]
+        },
+        {
+          "triangles": 24,
+          "vertices": 48,
+          "material_slots": 2,
+          "min": [
+            -0.385,
+            0,
+            -0.385
+          ],
+          "max": [
+            0.385,
+            1.32,
+            0.385
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "roof_vent",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 260,
+          "vertices": 456,
+          "material_slots": 2,
+          "min": [
+            -0.195,
+            0,
+            -0.195
+          ],
+          "max": [
+            0.195,
+            0.6300000000000001,
+            0.195
+          ]
+        },
+        {
+          "triangles": 84,
+          "vertices": 144,
+          "material_slots": 2,
+          "min": [
+            -0.195,
+            0,
+            -0.195
+          ],
+          "max": [
+            0.195,
+            0.6300000000000001,
+            0.195
+          ]
+        },
+        {
+          "triangles": 52,
+          "vertices": 96,
+          "material_slots": 2,
+          "min": [
+            -0.195,
+            0,
+            -0.195
+          ],
+          "max": [
+            0.195,
+            0.6300000000000001,
+            0.195
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "roof_vent",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 260,
+          "vertices": 456,
+          "material_slots": 2,
+          "min": [
+            -0.21750000000000003,
+            0,
+            -0.21750000000000003
+          ],
+          "max": [
+            0.21750000000000003,
+            0.675,
+            0.21750000000000003
+          ]
+        },
+        {
+          "triangles": 84,
+          "vertices": 144,
+          "material_slots": 2,
+          "min": [
+            -0.21750000000000003,
+            0,
+            -0.21750000000000003
+          ],
+          "max": [
+            0.21750000000000003,
+            0.675,
+            0.21750000000000003
+          ]
+        },
+        {
+          "triangles": 52,
+          "vertices": 96,
+          "material_slots": 2,
+          "min": [
+            -0.21750000000000003,
+            0,
+            -0.21750000000000003
+          ],
+          "max": [
+            0.21750000000000003,
+            0.675,
+            0.21750000000000003
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "roof_vent",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 260,
+          "vertices": 456,
+          "material_slots": 2,
+          "min": [
+            -0.24,
+            0,
+            -0.24
+          ],
+          "max": [
+            0.24,
+            0.72,
+            0.24
+          ]
+        },
+        {
+          "triangles": 84,
+          "vertices": 144,
+          "material_slots": 2,
+          "min": [
+            -0.24,
+            0,
+            -0.24
+          ],
+          "max": [
+            0.24,
+            0.72,
+            0.24
+          ]
+        },
+        {
+          "triangles": 52,
+          "vertices": 96,
+          "material_slots": 2,
+          "min": [
+            -0.24,
+            0,
+            -0.24
+          ],
+          "max": [
+            0.24,
+            0.72,
+            0.24
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "roof_vent",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 260,
+          "vertices": 456,
+          "material_slots": 2,
+          "min": [
+            -0.26249999999999996,
+            0,
+            -0.26249999999999996
+          ],
+          "max": [
+            0.26249999999999996,
+            0.7650000000000001,
+            0.26249999999999996
+          ]
+        },
+        {
+          "triangles": 84,
+          "vertices": 144,
+          "material_slots": 2,
+          "min": [
+            -0.26249999999999996,
+            0,
+            -0.26249999999999996
+          ],
+          "max": [
+            0.26249999999999996,
+            0.7650000000000001,
+            0.26249999999999996
+          ]
+        },
+        {
+          "triangles": 52,
+          "vertices": 96,
+          "material_slots": 2,
+          "min": [
+            -0.26249999999999996,
+            0,
+            -0.26249999999999996
+          ],
+          "max": [
+            0.26249999999999996,
+            0.7650000000000001,
+            0.26249999999999996
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "roof_vent",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 260,
+          "vertices": 456,
+          "material_slots": 2,
+          "min": [
+            -0.28500000000000003,
+            0,
+            -0.28500000000000003
+          ],
+          "max": [
+            0.28500000000000003,
+            0.81,
+            0.28500000000000003
+          ]
+        },
+        {
+          "triangles": 84,
+          "vertices": 144,
+          "material_slots": 2,
+          "min": [
+            -0.28500000000000003,
+            0,
+            -0.28500000000000003
+          ],
+          "max": [
+            0.28500000000000003,
+            0.81,
+            0.28500000000000003
+          ]
+        },
+        {
+          "triangles": 52,
+          "vertices": 96,
+          "material_slots": 2,
+          "min": [
+            -0.28500000000000003,
+            0,
+            -0.28500000000000003
+          ],
+          "max": [
+            0.28500000000000003,
+            0.81,
+            0.28500000000000003
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "entrance_door",
+      "variant": 0,
+      "lods": [
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 4,
+          "min": [
+            -0.4949999999999999,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.4949999999999999,
+            2.15,
+            0.1325
+          ]
+        },
+        {
+          "triangles": 60,
+          "vertices": 120,
+          "material_slots": 3,
+          "min": [
+            -0.4949999999999999,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.4949999999999999,
+            2.15,
+            0.095
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.49499999999999994,
+            0,
+            0
+          ],
+          "max": [
+            0.49499999999999994,
+            2.15,
+            0.09
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "entrance_door",
+      "variant": 1,
+      "lods": [
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 4,
+          "min": [
+            -0.5349999999999999,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.5349999999999999,
+            2.15,
+            0.1325
+          ]
+        },
+        {
+          "triangles": 60,
+          "vertices": 120,
+          "material_slots": 3,
+          "min": [
+            -0.5349999999999999,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.5349999999999999,
+            2.15,
+            0.095
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.5349999999999999,
+            0,
+            0
+          ],
+          "max": [
+            0.5349999999999999,
+            2.15,
+            0.09
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "entrance_door",
+      "variant": 2,
+      "lods": [
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 4,
+          "min": [
+            -0.575,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.575,
+            2.15,
+            0.1325
+          ]
+        },
+        {
+          "triangles": 60,
+          "vertices": 120,
+          "material_slots": 3,
+          "min": [
+            -0.575,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.575,
+            2.15,
+            0.095
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.575,
+            0,
+            0
+          ],
+          "max": [
+            0.575,
+            2.15,
+            0.09
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "entrance_door",
+      "variant": 3,
+      "lods": [
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 4,
+          "min": [
+            -0.615,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.615,
+            2.15,
+            0.1325
+          ]
+        },
+        {
+          "triangles": 60,
+          "vertices": 120,
+          "material_slots": 3,
+          "min": [
+            -0.615,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.615,
+            2.15,
+            0.095
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.615,
+            0,
+            0
+          ],
+          "max": [
+            0.615,
+            2.15,
+            0.09
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "entrance_door",
+      "variant": 4,
+      "lods": [
+        {
+          "triangles": 96,
+          "vertices": 192,
+          "material_slots": 4,
+          "min": [
+            -0.6549999999999999,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.6549999999999999,
+            2.15,
+            0.1325
+          ]
+        },
+        {
+          "triangles": 60,
+          "vertices": 120,
+          "material_slots": 3,
+          "min": [
+            -0.6549999999999999,
+            0,
+            -0.0050000000000000044
+          ],
+          "max": [
+            0.6549999999999999,
+            2.15,
+            0.095
+          ]
+        },
+        {
+          "triangles": 12,
+          "vertices": 24,
+          "material_slots": 1,
+          "min": [
+            -0.6549999999999999,
+            0,
+            0
+          ],
+          "max": [
+            0.6549999999999999,
+            2.15,
+            0.09
+          ]
+        }
+      ]
+    }
+  ]
+}
