@@ -1,6 +1,6 @@
 # Incremental roadmap (one task / PR / review)
 
-Do not give Codex the entire system as one task. Each increment must build/run in CI, leave artifacts, document what is not solved. Human review for architecture scope and visual baseline changes. No auto merge or broad refactor.
+Do not give Codex the entire system as one task. Each increment must build/run in CI, leave artifacts, document what is not solved. Assistant reviews the evidence and may merge each accepted L0–L6 PR into main without routine user approval. Require successful CI for the exact PR head and actual visual review where applicable; preserve branch protection and test coverage. Request user input only for material blockers, scope changes or native SDK gate N0. No broad refactor.
 
 | Gate | Bounded deliverable | Evidence / stop condition |
 |---|---|---|
@@ -15,4 +15,4 @@ Do not give Codex the entire system as one task. Each increment must build/run i
 | N1 native pilot | G9–G12, spatial batches/cluster, bounded streaming, profiling | measured workstation logs, accepted visual/functional quality |
 | N2 extension | larger Sochi region, optimized materials, optional pretrained enrichment | measured incremental gain; no training |
 
-L0 is infrastructure and reproduction, not product implementation. Research probes must remain clearly labeled. Start L1 only after L0 evidence reviewed. Parallel work on offline core allowed once schemas stabilized; native integration does not block offline development. No date/effort estimates without measured complexity. 
+L0 is infrastructure and reproduction, not product implementation. Research probes must remain clearly labeled. Start L1 only after L0 evidence is reviewed by the assistant and its PR is merged; apply the same gate to later increments. Parallel work on offline core allowed once schemas stabilized; native integration does not block offline development. No date/effort estimates without measured complexity. 
