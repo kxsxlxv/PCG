@@ -1,0 +1,11 @@
+# AGENTS.md — PCG contributor instructions
+
+Read docs/ARCHITECTURE.md, DATA_MODEL.md, TECHNICAL_SPECIFICATION.md, IMPLEMENTATION_ROADMAP.md, TESTING.md and CI_VISUAL_LAB.md before code changes. docs/ is normative; research/ holds evidence/probes, not production implementation.
+
+- Work on ONE explicitly authorized increment/issue at a time, in a branch and PR. Do not implement the whole roadmap, auto merge, or broaden scope without user approval. L0 lab first, L1 only after L0 reviewed.
+- No Sandworm, no required SDK for offline stages, no AI training/fine-tuning/manual tuning/runtime inference. No CUDA/Blender dependency in base compiler. No paid GPU or self-hosted setup without user approval.
+- Prefer existing OSS after source/license audit; never publish SDK, credentials, unlicensed imagery, large generated assets, or model weights. No live mutable external data in fast tests. Pin dependencies.
+- Keep canonical GIS observations, semantic geometry, architecture plans, render meshes and native adapters separate. Preserve footprint/holes and provenance; explicit rejected/fallback reasons. Stable seeds/IDs, meters, double world origins and float local vertices, explicit vertical datum.
+- Include fixture/test, metrics and actual geometry-derived image for visual changes. Save generated artifacts outside tracked source; upload CI artifacts even when failure occurs. No screenshot mockup or claims of SDK/GPU test without actual run. Separate local vs Actions run and synthetic vs real data results.
+- No change to goldens without review. No silent regression/disabled tests or relaxed thresholds just to pass. Record failing fixture and known gaps. Keep logs concise and reproducible.
+- Before handing off: summarize changed files, commands, exact test status, CI run/artifact references, blockers, decisions and next single task. Do not report an unrun test as PASS. Local SDK G0–G12 are separate from CPU Lab.
