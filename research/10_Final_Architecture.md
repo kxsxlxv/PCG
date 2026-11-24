@@ -1,0 +1,5 @@
+# 10 — Final architecture and staged implementation
+
+Research stages 00–09 are consolidated in [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md). New user direction: build and validate offline components with GitHub Actions and actual 3D-derived previews before assigning full implementation to Codex or introducing UNIGINE SDK. The first increment L0 is Visual Lab infrastructure/reproduction; then small independent tasks, each with tests and visual evidence. SDK native packer/runtime are deliberately delayed, not eliminated.
+
+Normative deliverables: [architecture](../docs/ARCHITECTURE.md), [data model](../docs/DATA_MODEL.md), [dependencies](../docs/DEPENDENCIES.md), [assets](../docs/ASSET_PIPELINE.md), [budgets](../docs/PERFORMANCE_BUDGET.md), [specification](../docs/TECHNICAL_SPECIFICATION.md), [roadmap](../docs/IMPLEMENTATION_ROADMAP.md), [testing](../docs/TESTING.md), [CI lab](../docs/CI_VISUAL_LAB.md), [agent instructions](../AGENTS.md). Earlier prototype results remain research, not accepted production implementations. No claims of native tests, local real-data completeness, GPU performance or photorealism. 
