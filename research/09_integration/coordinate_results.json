@@ -1,0 +1,50 @@
+{
+  "samples": 1681,
+  "crs": "EPSG:32637",
+  "origin_lon_lat": [
+    39.925,
+    43.43
+  ],
+  "origin_e_n_m": [
+    574867.5242397909,
+    4808982.850037337
+  ],
+  "bbox_lon_lat": [
+    39.87,
+    43.38,
+    40.03,
+    43.51
+  ],
+  "roundtrip_max_deg": 2.2469334198890888e-14,
+  "absolute_float_max_error_m": 0.25066078895880917,
+  "origin_relative_float_max_error_m": 0.0005257711349706958,
+  "tile_local_float_max_error_m": 0.000021460660106471713,
+  "enu_up_min_m": -11.855037648239865,
+  "enu_up_max_m": -0.00202805851009737,
+  "rotation_gltf_to_z_up": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      -1
+    ],
+    [
+      0,
+      1,
+      0
+    ]
+  ],
+  "rotation_determinant": 1,
+  "numpy": "2.3.5",
+  "pyproj": "3.7.2",
+  "limitations": [
+    "synthetic points, no DEM or SDK",
+    "float32 storage error only, not renderer precision",
+    "ENU ellipsoid sag is not a terrain correction",
+    "no vertical datum conversion grids evaluated"
+  ]
+}
