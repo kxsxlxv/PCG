@@ -1,0 +1,27 @@
+{
+  "cases": 600,
+  "accepted": 600,
+  "rejected": 0,
+  "high_uncertainty_abstentions": 600,
+  "mixed_case": {
+    "status": "abstain",
+    "reason": "heterogeneous_appearance",
+    "pixels": 3844,
+    "fraction": 0.9384765625,
+    "spread": 28.228538513183594
+  },
+  "naive_mean_delta_e76": 12.147463201681774,
+  "robust_mean_delta_e76": 0.11597352067839967,
+  "robust_p95_delta_e76": 0.24494594139659245,
+  "cpu_seconds": 0.30300570100010304,
+  "mean_ms": 0.5050095016668384,
+  "opencv": "4.13.0",
+  "numpy": "2.3.5",
+  "limitations": [
+    "synthetic RGB chips and known masks",
+    "invalid mask supplied by fixture, not automatically detected",
+    "no real aerial imagery or albedo recovery",
+    "no GPU or model inference",
+    "timing excludes I/O, geospatial raster access and fixture generation"
+  ]
+}
