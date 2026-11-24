@@ -1,0 +1,178 @@
+{
+  "scope": "synthetic rectangles only; logical slot tests not full mesh collision checks",
+  "cases": 1200,
+  "violations": 0,
+  "empty_facades": 274,
+  "repeat_order_mismatches": 0,
+  "samples": [
+    {
+      "id": "private_house:1000",
+      "floors": 1,
+      "windows": 11,
+      "balconies": 0,
+      "lod0_triangles": 534,
+      "lod1_proxy_triangles": 258,
+      "layout_hash": "bcdfd820c49bae21f0cc9ae3399a14a47c0012f03a993c5a7d3c631a9054da10"
+    },
+    {
+      "id": "private_house:1001",
+      "floors": 2,
+      "windows": 25,
+      "balconies": 2,
+      "lod0_triangles": 1206,
+      "lod1_proxy_triangles": 450,
+      "layout_hash": "f557acc9ec295d9370d331173986fcf204b9d4e605c6ea357262ca9913ab0707"
+    },
+    {
+      "id": "private_house:1002",
+      "floors": 3,
+      "windows": 41,
+      "balconies": 6,
+      "lod0_triangles": 2118,
+      "lod1_proxy_triangles": 690,
+      "layout_hash": "e46afc9cbfa332dd22765c5f5daca2dabc8fda73cfd6c6129eedc39e578da529"
+    },
+    {
+      "id": "guest_house:1000",
+      "floors": 3,
+      "windows": 33,
+      "balconies": 14,
+      "lod0_triangles": 2468,
+      "lod1_proxy_triangles": 656,
+      "layout_hash": "0d396178493482b8e4abb9ab7338534224a24fc4c37ad1df8534e6bca3f6aaff"
+    },
+    {
+      "id": "guest_house:1001",
+      "floors": 4,
+      "windows": 38,
+      "balconies": 33,
+      "lod0_triangles": 4244,
+      "lod1_proxy_triangles": 944,
+      "layout_hash": "34d4539419e57e4663f6be15a440782a79bbe88b0155b2146579191146e4e64b"
+    },
+    {
+      "id": "guest_house:1002",
+      "floors": 5,
+      "windows": 67,
+      "balconies": 32,
+      "lod0_triangles": 5204,
+      "lod1_proxy_triangles": 1280,
+      "layout_hash": "d2d7f40c10b54d8c72e923bffc989817a5f6a1724c5748fe760bac9dacad7a83"
+    },
+    {
+      "id": "panel_block:1000",
+      "floors": 4,
+      "windows": 87,
+      "balconies": 24,
+      "lod0_triangles": 5436,
+      "lod1_proxy_triangles": 1464,
+      "layout_hash": "584cfe746774b1f0c9d4b3fb85c8b15c7a75061e7c2a92f22d2e29003aa10312"
+    },
+    {
+      "id": "panel_block:1001",
+      "floors": 5,
+      "windows": 123,
+      "balconies": 36,
+      "lod0_triangles": 7788,
+      "lod1_proxy_triangles": 2040,
+      "layout_hash": "39206eea447f3e417ee9636dab9cd4a31a4a6d716b6eebcfcaff5db8189d93f5"
+    },
+    {
+      "id": "panel_block:1002",
+      "floors": 6,
+      "windows": 175,
+      "balconies": 40,
+      "lod0_triangles": 10044,
+      "lod1_proxy_triangles": 2712,
+      "layout_hash": "7ffc81dee783928df7ee329cf7d5f7ed84f13cb3a748c2b9a5af52361da7ef0c"
+    },
+    {
+      "id": "modern_apartment:1000",
+      "floors": 8,
+      "windows": 96,
+      "balconies": 63,
+      "lod0_triangles": 9228,
+      "lod1_proxy_triangles": 2040,
+      "layout_hash": "8818e831c06f352b34db2f55e7914ccbc3a0ff061adc46001f006ead6bdabc08"
+    },
+    {
+      "id": "modern_apartment:1001",
+      "floors": 9,
+      "windows": 151,
+      "balconies": 64,
+      "lod0_triangles": 11340,
+      "lod1_proxy_triangles": 2712,
+      "layout_hash": "f62c8bdb5390b59aefbac44bc492331ab99b5cb6625606ddd1e52a4cfb375d87"
+    },
+    {
+      "id": "modern_apartment:1002",
+      "floors": 10,
+      "windows": 187,
+      "balconies": 72,
+      "lod0_triangles": 13356,
+      "lod1_proxy_triangles": 3240,
+      "layout_hash": "6fce49569aee31a6a1552bc01f5d99740b1d94c16ef8a65f485ab9ef13a720ab"
+    },
+    {
+      "id": "resort_hotel:1000",
+      "floors": 5,
+      "windows": 61,
+      "balconies": 48,
+      "lod0_triangles": 6564,
+      "lod1_proxy_triangles": 1440,
+      "layout_hash": "f335b0ea7838dfd3ce7b870439a1075fc098ffb0be82263c41d67b7fe5d623c8"
+    },
+    {
+      "id": "resort_hotel:1001",
+      "floors": 6,
+      "windows": 95,
+      "balconies": 60,
+      "lod0_triangles": 8844,
+      "lod1_proxy_triangles": 1992,
+      "layout_hash": "b012e2b37273441a45822f96de61e72c5ad307c3a443fd32286c45688b0860db"
+    },
+    {
+      "id": "resort_hotel:1002",
+      "floors": 7,
+      "windows": 107,
+      "balconies": 102,
+      "lod0_triangles": 12852,
+      "lod1_proxy_triangles": 2640,
+      "layout_hash": "a3a21f47c6003b178e7b77efc0dafbe3c1af6191bb1de062eb57c48e586e448c"
+    },
+    {
+      "id": "warehouse:1000",
+      "floors": 1,
+      "windows": 13,
+      "balconies": 0,
+      "lod0_triangles": 572,
+      "lod1_proxy_triangles": 248,
+      "layout_hash": "a7ec5b8bd70335bf3b905ec22412c3c5ce952d0ccf0083ca7fd86135524ca074"
+    },
+    {
+      "id": "warehouse:1001",
+      "floors": 1,
+      "windows": 15,
+      "balconies": 0,
+      "lod0_triangles": 644,
+      "lod1_proxy_triangles": 272,
+      "layout_hash": "194b660906ad558fe7a195b5ad534427fd944497a345e8e80f70dd2ea5843bb5"
+    },
+    {
+      "id": "warehouse:1002",
+      "floors": 1,
+      "windows": 19,
+      "balconies": 0,
+      "lod0_triangles": 788,
+      "lod1_proxy_triangles": 320,
+      "layout_hash": "6587f6afe07ec643e1fe18490b9266f75bbf83af2c005b1d239af9f60848fe99"
+    }
+  ],
+  "layout_test_seconds": 1.0144,
+  "totals": {
+    "windows": 1344,
+    "balconies": 596,
+    "lod0_triangles": 103230,
+    "lod1_proxy_triangles": 25398
+  }
+}
