@@ -1,0 +1,498 @@
+{
+  "versions": {
+    "shapely": "2.1.2",
+    "geos": "3.13.1",
+    "trimesh": "4.11.1"
+  },
+  "triangulation": {
+    "rectangle": {
+      "cdt": {
+        "triangles": 2,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 2,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "L": {
+      "cdt": {
+        "triangles": 4,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 4,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "U": {
+      "cdt": {
+        "triangles": 6,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 6,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "T": {
+      "cdt": {
+        "triangles": 6,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 6,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "courtyard": {
+      "cdt": {
+        "triangles": 8,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 8,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "narrow": {
+      "cdt": {
+        "triangles": 2,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 2,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "irregular": {
+      "cdt": {
+        "triangles": 4,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 4,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "notch": {
+      "cdt": {
+        "triangles": 6,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 6,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    },
+    "collinear": {
+      "cdt": {
+        "triangles": 4,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      },
+      "unconstrained_filtered": {
+        "triangles": 4,
+        "missing_m2": 0.0,
+        "outside_m2": 0.0,
+        "overlap_m2": 0.0
+      }
+    }
+  },
+  "meshes": {
+    "rectangle_flat": {
+      "triangles": 2,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 12,
+      "vertices": 8,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 576.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "rectangle_gable": {
+      "triangles": 4,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 20,
+      "vertices": 12,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 686.85125184,
+      "volume_error_m3": 1.6e-07,
+      "roof_rise_m": 2.30940108,
+      "degenerate_faces": 0
+    },
+    "rectangle_hip_convex": {
+      "triangles": 20,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 54,
+      "vertices": 29,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 662.21764032,
+      "volume_error_m3": 1.2e-07,
+      "roof_rise_m": 2.30940108,
+      "degenerate_faces": 0
+    },
+    "L_flat": {
+      "triangles": 4,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 20,
+      "vertices": 12,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 540.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "L_gable": {
+      "triangles": 5,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 24,
+      "vertices": 14,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 669.90381075,
+      "volume_error_m3": 1.8e-07,
+      "roof_rise_m": 2.88675135,
+      "degenerate_faces": 0
+    },
+    "U_flat": {
+      "triangles": 6,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 28,
+      "vertices": 16,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 576.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "U_gable": {
+      "triangles": 10,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 44,
+      "vertices": 24,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 709.94526264,
+      "volume_error_m3": 1.9e-07,
+      "roof_rise_m": 2.88675135,
+      "degenerate_faces": 0
+    },
+    "T_flat": {
+      "triangles": 6,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 28,
+      "vertices": 16,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 432.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "T_gable": {
+      "triangles": 8,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 36,
+      "vertices": 20,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 526.68544428,
+      "volume_error_m3": 1.3e-07,
+      "roof_rise_m": 2.88675135,
+      "degenerate_faces": 0
+    },
+    "courtyard_flat": {
+      "triangles": 8,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 32,
+      "vertices": 16,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 864.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "courtyard_gable": {
+      "triangles": 12,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 48,
+      "vertices": 24,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 1071.8460972,
+      "volume_error_m3": 2.9e-07,
+      "roof_rise_m": 3.46410162,
+      "degenerate_faces": 0
+    },
+    "narrow_flat": {
+      "triangles": 2,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 12,
+      "vertices": 8,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 60.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "narrow_gable": {
+      "triangles": 4,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 20,
+      "vertices": 12,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 60.72168785,
+      "volume_error_m3": 1e-08,
+      "roof_rise_m": 0.14433757,
+      "degenerate_faces": 0
+    },
+    "narrow_hip_convex": {
+      "triangles": 16,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 50,
+      "vertices": 27,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 60.71567378,
+      "volume_error_m3": 1e-08,
+      "roof_rise_m": 0.14433757,
+      "degenerate_faces": 0
+    },
+    "irregular_flat": {
+      "triangles": 4,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 20,
+      "vertices": 12,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 549.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "irregular_gable": {
+      "triangles": 6,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 28,
+      "vertices": 16,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 710.76632858,
+      "volume_error_m3": 3e-08,
+      "roof_rise_m": 3.17542648,
+      "degenerate_faces": 0
+    },
+    "notch_flat": {
+      "triangles": 6,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 28,
+      "vertices": 16,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 858.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "notch_gable": {
+      "triangles": 10,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 44,
+      "vertices": 24,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 1105.45232572,
+      "volume_error_m3": 3.5e-07,
+      "roof_rise_m": 3.46410162,
+      "degenerate_faces": 0
+    },
+    "collinear_flat": {
+      "triangles": 4,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 20,
+      "vertices": 12,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 576.0,
+      "volume_error_m3": 0.0,
+      "roof_rise_m": 0.0,
+      "degenerate_faces": 0
+    },
+    "collinear_gable": {
+      "triangles": 6,
+      "missing_m2": 0.0,
+      "outside_m2": 0.0,
+      "overlap_m2": 0.0,
+      "mesh_triangles": 28,
+      "vertices": 16,
+      "watertight": true,
+      "winding_consistent": true,
+      "positive_volume": true,
+      "volume_m3": 686.85125184,
+      "volume_error_m3": 1.6e-07,
+      "roof_rise_m": 2.30940108,
+      "degenerate_faces": 0
+    }
+  },
+  "repair": {
+    "bowtie": {
+      "type": "MultiPolygon",
+      "polygon_count": 2,
+      "area_after": 32.0
+    }
+  },
+  "slabs": {
+    "naive_sum_volume_m3": 1376.0,
+    "union_volume_m3": 1184.0,
+    "horizontal_exposure": [
+      {
+        "z": 0,
+        "up_area_m2": 0.0,
+        "down_area_m2": 128.0
+      },
+      {
+        "z": 6,
+        "up_area_m2": 64.0,
+        "down_area_m2": 0.0
+      },
+      {
+        "z": 8,
+        "up_area_m2": 0.0,
+        "down_area_m2": 16.0
+      },
+      {
+        "z": 10,
+        "up_area_m2": 16.0,
+        "down_area_m2": 0.0
+      },
+      {
+        "z": 12,
+        "up_area_m2": 64.0,
+        "down_area_m2": 0.0
+      }
+    ]
+  },
+  "random_triangulation": {
+    "cdt": {
+      "cases": 250,
+      "nonzero_missing_cases": 0,
+      "max_missing_m2": 0.0,
+      "total_triangles": 2735,
+      "elapsed_s_including_validation": 0.2357
+    },
+    "unconstrained_filtered": {
+      "cases": 250,
+      "nonzero_missing_cases": 96,
+      "max_missing_m2": 50.053563866,
+      "total_triangles": 2568,
+      "elapsed_s_including_validation": 0.2627
+    }
+  },
+  "mesh_summary": {
+    "cases": 20,
+    "watertight": 20,
+    "consistent_winding": 20,
+    "positive_volume": 20,
+    "max_volume_error_m3": 3.5e-07
+  }
+}
