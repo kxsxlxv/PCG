@@ -18,7 +18,7 @@
   "roundtrip_max_deg": 2.2469334198890888e-14,
   "absolute_float_max_error_m": 0.25066078895880917,
   "origin_relative_float_max_error_m": 0.0005257711349706958,
-  "tile_local_float_max_error_m": 0.000021460660106471713,
+  "tile_local_float_max_error_m": 2.1460660106471713e-05,
   "enu_up_min_m": -11.855037648239865,
   "enu_up_max_m": -0.00202805851009737,
   "rotation_gltf_to_z_up": [
@@ -38,7 +38,7 @@
       0
     ]
   ],
-  "rotation_determinant": 1,
+  "rotation_determinant": 1.0,
   "numpy": "2.3.5",
   "pyproj": "3.7.2",
   "limitations": [
