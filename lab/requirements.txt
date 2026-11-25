@@ -5,3 +5,4 @@ pyproj==3.7.2
 Pillow==12.3.0
 matplotlib==3.10.8
 opencv-python-headless==4.13.0.92
+rasterio==1.4.3
