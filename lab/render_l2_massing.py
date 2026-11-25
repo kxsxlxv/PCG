@@ -14,7 +14,7 @@ SIZE=384
 BG=(245,243,238)
 
 
-def raster(mesh,view,up):
+def raster(mesh,view,up,*,textured=False):
     view=np.array(view,dtype=float);view/=np.linalg.norm(view)
     right=np.cross(up,view);right/=np.linalg.norm(right)
     up=np.cross(view,right)
@@ -41,10 +41,19 @@ def raster(mesh,view,up):
         dst=depth[y0:y1,x0:x1]
         mask=(wa>=-1e-8)&(wb>=-1e-8)&(wc>=-1e-8)&(dz>dst)
         dst[mask]=dz[mask]
-        rgb=mesh.visual.vertex_colors[face,:3].mean(axis=0)
         shade=0.68+0.32*max(0.,mesh.face_normals[k]@light)
+        if textured:
+            tex=np.asarray(mesh.visual.material.baseColorTexture.convert('RGB'))
+            uv=mesh.visual.uv[face]
+            sample=wa[mask,None]*uv[0]+wb[mask,None]*uv[1]+wc[mask,None]*uv[2]
+            tx=np.floor((sample[:,0]%1)*tex.shape[1]).astype(int)%tex.shape[1]
+            ty=np.floor((-sample[:,1]%1)*tex.shape[0]).astype(int)%tex.shape[0]
+            rgb=tex[ty,tx]
+        else:
+            rgb=mesh.visual.vertex_colors[face,:3].mean(axis=0)
         img[y0:y1,x0:x1][mask]=np.uint8(rgb*shade)
-    assert np.isfinite(depth).sum()>100
+    if not textured:
+        assert np.isfinite(depth).sum()>100
     return Image.fromarray(img),depth
 
 
