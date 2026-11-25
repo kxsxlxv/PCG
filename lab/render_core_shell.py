@@ -54,4 +54,7 @@ def main():
         report.append({"roof":roof,"volume_m3":12*8*(6+rise/2),"triangles":len(s.triangles()),"surfaces":len(s.surfaces),"edges":len(s.edges)})
     (out/"report.json").write_text(json.dumps(report,indent=2))
     print(json.dumps(report))
-if __name__=="__main__":main()
+if __name__=="__main__":
+    main()
+    from render_l2_massing import main as render_l2
+    render_l2()
