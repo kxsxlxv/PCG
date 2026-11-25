@@ -70,3 +70,6 @@ if __name__=="__main__":
 
     from render_material_uv import main as render_materials
     render_materials()
+
+    from render_neighborhood import main as render_block
+    render_block()
