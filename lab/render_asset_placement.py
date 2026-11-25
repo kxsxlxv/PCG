@@ -39,11 +39,13 @@ def export(mesh,path):
 def main():
     out=Path("artifacts/l3-assets");out.mkdir(parents=True,exist_ok=True)
     library=out/"library";library.mkdir(exist_ok=True)
-    sheet=Image.new("RGB",(4*SIZE,6*SIZE),"white")
+    sheet=Image.new("RGB",(4*SIZE,8*SIZE),"white")
     report=[]
     emitted=set()
-    for row,(profile,style) in enumerate(PROFILES.items()):
-        f=Footprint(profile,[(0,0),(12,0),(12,8),(0,8)])
+    fixtures=[(name,style,[(0,0),(12,0),(12,8),(0,8)]) for name,style in PROFILES.items()]
+    fixtures.append(("narrow_U",PROFILES["apartments"],[(0,0),(12,0),(12,10),(6.5,10),(6.5,3),(5.5,3),(5.5,10),(0,10)]))
+    for row,(profile,style,outer) in enumerate(fixtures):
+        f=Footprint(profile,outer)
         plan=plan_facades(f,9 if profile!="house" else 6,3 if profile!="house" else 2,style,
                           party_edges=[(0,1)] if profile=="apartments" else [])
         assets=plan_assets(f,plan)
