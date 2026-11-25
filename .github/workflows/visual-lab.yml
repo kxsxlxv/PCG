@@ -53,6 +53,14 @@ jobs:
         run: |
           g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o /tmp/pcg_zero_tile_abi
           python lab/compile_zero_tiles.py --self-test --decoder /tmp/pcg_zero_tile_abi
+      - name: Software GLSL facade shader reference
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: |
+          python -m pip install moderngl==5.12.0 glcontext==3.0.0
+          python lab/render_zero_facade_glsl.py
       - name: Run research probes
         run: python lab/run_probes.py
       - name: Report
