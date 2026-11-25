@@ -173,6 +173,7 @@ def main():
         im.save(OUT/f"{'close' if close else 'block'}_dense.png")
     sheet.save(OUT/"contact.png")
     material_variation(v,uv,ids,table,maps)
+    night_and_spatial(v,uv,ids,table,maps)
     groups_by_material=len({(r["role"],r["family"]) for r in table})
     report={"buildings":12,"triangles":len(v)//3,"split_vertices":len(v),
             "surface_records":len(table),"separate_role_material_groups":groups_by_material,
@@ -276,5 +277,203 @@ def material_variation(v,uv,ids,table,maps):
     thumb=sheet.copy();thumb.thumbnail((960,800));buf=io.BytesIO();thumb.save(buf,format="JPEG",quality=65,optimize=True)
     data=base64.b64encode(buf.getvalue()).decode()
     for i in range(0,len(data),4000):print(f"VARIATION_PREVIEW_{i//4000:03d} "+data[i:i+4000],flush=True)
+
+
+def night_and_spatial(v,uv,ids,table,maps):
+    """One grouped CI: room occupancy, exact box filter, and spatial metadata stress.
+    CPU reference only, not runtime shader or native batching. Diagnostic images are
+    never stored as per-building runtime textures.
+    """
+    import time
+    from pcg.far_emission import linear_mips
+    global shader
+    original=shader
+    hours=(17,21,1)
+    profiles={
+        "house":(.18,.68,.10),
+        "apartments":(.22,.57,.12),
+        "office":(.65,.16,.025),
+    }
+    def profile(r):
+        i=int(r["building"].split(":")[-1])
+        return "office" if i%5==4 else "house" if r["floors"]==2 else "apartments"
+    def h32(a,b,c):
+        # Pure integer hash reference, inputs are stable identity and cell indices.
+        x=(np.uint64(a)+np.asarray(b,dtype=np.uint64)*374761393+
+           np.asarray(c,dtype=np.uint64)*668265263)&np.uint64(0xffffffff)
+        x=((x^(x>>13))*np.uint64(1274126177))&np.uint64(0xffffffff)
+        return x^(x>>16)
+    def radiance(r,bay,floor,hour,correlated=True):
+        room=bay//2 if correlated else bay
+        h=h32(r["seed"],room,floor)
+        q=h32(r["seed"]^0xa7b193e7,bay,floor)
+        prob=profiles[profile(r)][hours.index(hour)]
+        on=(h%10000)<round(prob*10000)
+        warm=(h%4)!=0
+        col=np.where(np.asarray(warm)[...,None],np.array([.82,.52,.24]),np.array([.66,.69,.57]))
+        gain=.35+.65*(q%1000)/999.
+        return col*(on*gain)[...,None],on
+    def composite(sample,r,maps,mode,dense=False):
+        color,e=original(sample,r,maps,"day",dense)
+        if r["role"]!="wall":return color,e
+        u,z=sample.T
+        bays=r["bays"]*(2 if dense else 1)
+        gx=u/r["length"]*bays;gy=z/3.
+        bx=np.floor(gx).astype(int);fl=np.floor(gy).astype(int)
+        x=gx%1;y=gy%1
+        valid=(bx>=0)&(bx<bays)&(fl>=0)&(fl<r["floors"])
+        door=valid&r["entry"]&(fl==0)&(bx==bays//2)&(x>.23)&(x<.77)&(y<.80)
+        glass=valid&~door&(x>.27)&(x<.73)&(y>.29)&(y<.78)&(np.abs(x-.5)>.025)&(np.abs(y-.54)>.018)
+        if np.any(glass):
+            e[glass]=radiance(r,bx[glass],fl[glass],current_hour,current_correlated)[0]
+        return color,e
+    # Actual triangle-buffer renders at fixed cameras; independent/correlated
+    # and temporal profiles evaluated without changing geometry.
+    sheet=Image.new("RGB",(640*3,640*2+32),(18,25,35))
+    ImageDraw.Draw(sheet).text((8,8),"CPU reference / room-correlated lighting / same merged shell",fill=(225,225,225))
+    try:
+        shader=composite
+        for row,close in enumerate((True,False)):
+            reference=None
+            for col,current_hour in enumerate(hours):
+                current_correlated=True
+                im,dep=render(v,uv,ids,table,maps,"night",close=close)
+                if reference is None:reference=dep
+                else:np.testing.assert_array_equal(dep,reference)
+                ImageDraw.Draw(im).text((8,8),f"{current_hour:02d}:00",fill=(230,230,230))
+                im.save(OUT/f"night_{'close' if close else 'block'}_{current_hour}.png")
+                sheet.paste(im,(col*640,row*640+32))
+        current_hour=21;current_correlated=False
+        im,_=render(v,uv,ids,table,maps,"night")
+        im.save(OUT/"night_independent.png")
+    finally:shader=original
+    sheet.save(OUT/"night_contact.png")
+
+    # Exact rectangular glass-pane coverage on a facade-aligned pixel grid.
+    # This is a ground-truth CPU filter, not an efficient proposed runtime loop.
+    def panes(r,hour,correlated=True):
+        width=r["length"]/r["bays"]
+        result=[]
+        for floor in range(r["floors"]):
+            for bay in range(r["bays"]):
+                if r["entry"] and floor==0 and bay==r["bays"]//2:continue
+                rgb,on=radiance(r,bay,floor,hour,correlated)
+                for a,b in ((.27,.475),(.525,.73)):
+                    for c,d in ((.29,.522),(.558,.78)):
+                        result.append(((bay+a)*width,(bay+b)*width,(floor+c)*3,(floor+d)*3,rgb))
+        return result
+    def filter_rects(rects,xe,ze):
+        dx=np.diff(xe);dz=np.diff(ze)
+        image=np.zeros((len(dz),len(dx),3),np.float64)
+        point=np.zeros_like(image)
+        xc=(xe[1:]+xe[:-1])/2;zc=(ze[1:]+ze[:-1])/2
+        total=np.zeros(3)
+        for a,b,c,d,rgb in rects:
+            ox=np.maximum(0,np.minimum(xe[1:],b)-np.maximum(xe[:-1],a))/dx
+            oz=np.maximum(0,np.minimum(ze[1:],d)-np.maximum(ze[:-1],c))/dz
+            image+=oz[:,None,None]*ox[None,:,None]*rgb
+            point+=((zc[:,None]>=c)&(zc[:,None]<d)&(xc[None,:]>=a)&(xc[None,:]<b))[...,None]*rgb
+            total+=(b-a)*(d-c)*rgb
+        area=dz[:,None]*dx[None,:]
+        np.testing.assert_allclose((image*area[...,None]).sum((0,1)),total,rtol=1e-12,atol=1e-10)
+        return image,point,total,(point*area[...,None]).sum((0,1))
+    error=[];phase_error=[];checks=0;windows=0;lit_counts={str(h):0 for h in hours};pairs=0
+    for r in table:
+        if r["role"]!="wall":continue
+        # Actual stability under an ephemeral record index change.
+        rr=dict(r,id=r["id"]+2000)
+        for f in range(r["floors"]):
+            for b in range(r["bays"]):
+                if r["entry"] and f==0 and b==r["bays"]//2:continue
+                windows+=1
+                for hour in hours:
+                    a,on=radiance(r,b,f,hour)
+                    a2,on2=radiance(rr,b,f,hour)
+                    np.testing.assert_array_equal(a,a2);assert on==on2
+                    lit_counts[str(hour)]+=int(on)
+                if b%2==0 and b+1<r["bays"] and not (r["entry"] and f==0 and r["bays"]//2 in (b,b+1)):
+                    assert radiance(r,b,f,21)[1]==radiance(r,b+1,f,21)[1]
+                    pairs+=1
+        rects=panes(r,21)
+        xe=np.linspace(0,r["length"],65);ze=np.linspace(0,r["height"],65)
+        a,_,total,_=filter_rects(rects,xe,ze)
+        levels=linear_mips(a)
+        np.testing.assert_allclose(levels[-1][0,0],total/(r["length"]*r["height"]),atol=1e-12)
+        # Phase-shifted grid, padded to cover every pane, exact energy vs point sampling.
+        for pitch in (.5,1.,2.,4.):
+            point_totals=[]
+            for phase in np.arange(8)/8:
+                xe=np.arange(-pitch+phase*pitch,r["length"]+2*pitch,pitch)
+                ze=np.arange(-pitch+phase*pitch,r["height"]+2*pitch,pitch)
+                _,_,total,point_total=filter_rects(rects,xe,ze)
+                checks+=1
+                if total.sum()>1e-9:
+                    error.append(float(abs(point_total.sum()-total.sum())/total.sum()))
+                    point_totals.append(float(point_total.sum()/total.sum()))
+            if point_totals:phase_error.append(float(np.std(point_totals)))
+    report={"hours":list(hours),"illustrative_probabilities":profiles,"windows":windows,
+            "lit_counts":lit_counts,"correlated_pairs_checked":pairs,
+            "exact_box_filter_checks":checks,"linear_mip_mean_preserved":True,
+            "point_sampling_mean_relative_energy_error":float(np.mean(error)),
+            "point_sampling_p95_relative_energy_error":float(np.percentile(error,95)),
+            "point_sampling_mean_phase_std":float(np.mean(phase_error)),
+            "record_index_independent":True,"triangles":len(v)//3,"opening_triangles_added":0,
+            "limitations":["synthetic occupancy profiles","facade-aligned box filter reference only, not perspective/GPU anti-aliasing","no measured temporal flight or LOD shader"]}
+    (OUT/"night_report.json").write_text(json.dumps(report,indent=2))
+    print("NIGHT_REPORT "+json.dumps(report),flush=True)
+    thumb=sheet.copy();thumb.thumbnail((960,800));buf=io.BytesIO();thumb.save(buf,format="JPEG",quality=65,optimize=True)
+    data=base64.b64encode(buf.getvalue()).decode()
+    for i in range(0,len(data),4000):print(f"NIGHT_PREVIEW_{i//4000:03d} "+data[i:i+4000],flush=True)
+
+    # Synthetic spatial metadata stress. Counts correspond to rectangular
+    # shell archetypes, not allocated/rendered geometry for the large scenes.
+    rows=[]
+    for count in (1000,10000,100000):
+        i=np.arange(count,dtype=np.int64)
+        n=int(np.ceil(np.sqrt(count)))
+        xy=np.column_stack((i%n,i//n)).astype(np.float64)*22.
+        widths=11+2*(i%3);depths=8+i%2
+        upper=xy+np.column_stack((widths,depths))
+        centers=(xy+upper)*.5
+        tri=np.where(i%4==0,16,12)
+        records=np.where(i%4==0,7,6)
+        # Match original fixture's wall/roof family indices; base family shared.
+        wall=i%4;roof=i%3
+        for size in (64,128,256,512,1024,2048):
+            start=time.perf_counter()
+            cells=np.floor(centers/size).astype(np.int64)
+            keys,owner=np.unique(cells,axis=0,return_inverse=True)
+            owner=owner.reshape(-1)
+            groups=len(keys)
+            mins=np.full((groups,2),np.inf);maxs=np.full((groups,2),-np.inf)
+            np.minimum.at(mins,owner,xy);np.maximum.at(maxs,owner,upper)
+            assert np.all(xy>=mins[owner]) and np.all(upper<=maxs[owner])
+            per=np.bincount(owner,minlength=groups)
+            counts=np.zeros(groups,dtype=np.int64);np.add.at(counts,owner,tri)
+            rec=np.zeros(groups,dtype=np.int64);np.add.at(rec,owner,records)
+            assert per.sum()==count and counts.sum()==tri.sum()
+            assert rec.sum()==records.sum() and rec.max()<=65536
+            mat_groups=int(groups+len(np.unique(owner*4+wall))+len(np.unique(owner*3+roof)))
+            assert mat_groups>=3*groups
+            # Axis-aligned observation rectangle proxy; not engine frustum/occlusion.
+            proxies=[]
+            for frac in (.2,.5,.8):
+                c=centers.min(0)+(centers.max(0)-centers.min(0))*frac
+                lo=c-250;hi=c+250
+                direct=np.all(upper>=lo,axis=1)&np.all(xy<=hi,axis=1)
+                visible=np.all(maxs>=lo,axis=1)&np.all(mins<=hi,axis=1)
+                assert np.all(visible[owner[direct]])
+                proxies.append({"direct_triangles":int(tri[direct].sum()),
+                                "tile_submitted_triangles":int(counts[visible].sum()),
+                                "visible_tiles":int(visible.sum())})
+            rows.append({"buildings":count,"tile_m":size,"tile_objects":groups,
+                         "per_material_surfaces":mat_groups,"shared_role_surfaces":3*groups,
+                         "max_records_per_tile":int(rec.max()),"triangles_model":int(tri.sum()),
+                         "parameter_bytes_64B_per_record":int(records.sum()*64),
+                         "proxy_views":proxies,"cpu_metadata_ms":(time.perf_counter()-start)*1000})
+    spatial={"rows":rows,"scope":"synthetic rectangular AABB metadata model; no geometry allocation at scale, GPU/DIP/SDK not measured",
+             "ownership_unique":True,"conservative_proxy_visibility":True}
+    (OUT/"spatial_report.json").write_text(json.dumps(spatial,indent=2))
+    print("SPATIAL_REPORT "+json.dumps(spatial),flush=True)
 
 if __name__=="__main__":main()
