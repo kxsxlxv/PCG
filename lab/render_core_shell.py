@@ -92,3 +92,6 @@ if __name__=="__main__":
 
     from resolve_gis import main as resolve_gis
     resolve_gis()
+
+    from terrain_gis import main as terrain_gis
+    terrain_gis()
