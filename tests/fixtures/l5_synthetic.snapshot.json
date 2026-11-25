@@ -1,0 +1,16 @@
+{
+  "source_id": "fixture.adler.synthetic",
+  "uri": "urn:pcg:fixture:adler-synthetic-v1",
+  "release": "fixture-v1",
+  "epoch": "unknown",
+  "license": "Original PCG synthetic fixture; repository license applies",
+  "access_terms": "Synthetic coordinates only; not a surveyed or provider-supplied building",
+  "authorization": "synthetic_fixture",
+  "sha256": "f7e35426332167315812d4d78f937cd5e478bfd1d7c218decb182afb58dbe4bd",
+  "format": "geojson",
+  "horizontal_crs": "OGC:CRS84",
+  "axis_order": "lon_lat",
+  "vertical_reference": "not_applicable_2d",
+  "retrieved_at": "2026-11-25T00:00:00Z",
+  "schema_version": 1
+}
