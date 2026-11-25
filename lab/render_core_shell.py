@@ -67,3 +67,6 @@ if __name__=="__main__":
 
     from render_asset_placement import main as render_assets
     render_assets()
+
+    from render_material_uv import main as render_materials
+    render_materials()
