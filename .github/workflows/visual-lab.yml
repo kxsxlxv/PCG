@@ -39,6 +39,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/render_core_shell.py
+      - name: Zero-geometry batched facade research
+        env:
+          PYTHONPATH: src
+        run: python lab/render_zero_geometry_facades.py
       - name: Run research probes
         run: python lab/run_probes.py
       - name: Report
