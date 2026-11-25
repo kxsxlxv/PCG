@@ -73,3 +73,6 @@ if __name__=="__main__":
 
     from render_neighborhood import main as render_block
     render_block()
+
+    from render_far_emission import main as render_far
+    render_far()
