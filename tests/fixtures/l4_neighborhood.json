@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "frame": "local_z_up",
+  "units": "m",
+  "seed": 17,
+  "buildings": [
+    {
+      "id": "block-a",
+      "profile": "house",
+      "outer": [
+        [
+          0,
+          0
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          0,
+          9
+        ]
+      ],
+      "eave": 6,
+      "levels": 2,
+      "roof": "hip",
+      "rise": 2
+    },
+    {
+      "id": "block-b",
+      "profile": "apartments",
+      "outer": [
+        [
+          18,
+          0
+        ],
+        [
+          32,
+          0
+        ],
+        [
+          32,
+          10
+        ],
+        [
+          18,
+          10
+        ]
+      ],
+      "eave": 12,
+      "levels": 4,
+      "roof": "flat",
+      "rise": 0
+    },
+    {
+      "id": "block-c",
+      "profile": "office",
+      "outer": [
+        [
+          38,
+          0
+        ],
+        [
+          52,
+          0
+        ],
+        [
+          52,
+          12
+        ],
+        [
+          38,
+          12
+        ]
+      ],
+      "eave": 12,
+      "levels": 4,
+      "roof": "flat",
+      "rise": 0
+    },
+    {
+      "id": "block-d",
+      "profile": "house",
+      "outer": [
+        [
+          0,
+          20
+        ],
+        [
+          12,
+          20
+        ],
+        [
+          12,
+          31
+        ],
+        [
+          0,
+          31
+        ]
+      ],
+      "eave": 6,
+      "levels": 2,
+      "roof": "hip",
+      "rise": 2.5
+    },
+    {
+      "id": "block-e",
+      "profile": "apartments",
+      "outer": [
+        [
+          18,
+          20
+        ],
+        [
+          34,
+          20
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          18,
+          34
+        ]
+      ],
+      "holes": [
+        [
+          [
+            23,
+            24
+          ],
+          [
+            29,
+            24
+          ],
+          [
+            29,
+            30
+          ],
+          [
+            23,
+            30
+          ]
+        ]
+      ],
+      "eave": 9,
+      "levels": 3,
+      "roof": "flat",
+      "rise": 0
+    },
+    {
+      "id": "block-f",
+      "profile": "office",
+      "outer": [
+        [
+          39,
+          20
+        ],
+        [
+          52,
+          20
+        ],
+        [
+          52,
+          27
+        ],
+        [
+          46,
+          27
+        ],
+        [
+          46,
+          34
+        ],
+        [
+          39,
+          34
+        ]
+      ],
+      "eave": 9,
+      "levels": 3,
+      "roof": "flat",
+      "rise": 0
+    }
+  ]
+}

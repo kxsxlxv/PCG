@@ -14,21 +14,22 @@ SIZE=384
 BG=(245,243,238)
 
 
-def raster(mesh,view,up,*,textured=False,night=False):
+def raster(mesh,view,up,*,textured=False,night=False,center=(6,5,4),pixels_per_m=20,size=SIZE):
     view=np.array(view,dtype=float);view/=np.linalg.norm(view)
     right=np.cross(up,view);right/=np.linalg.norm(right)
     up=np.cross(view,right)
-    v=mesh.vertices-np.array([6,5,4])
-    xy=np.column_stack((v@right,-v@up))*20+SIZE/2
+    v=mesh.vertices-np.asarray(center,dtype=float)
+    xy=np.column_stack((v@right,-v@up))*pixels_per_m+size/2
     z=v@view
-    img=np.empty((SIZE,SIZE,3),dtype=np.uint8);img[:]=BG
-    depth=np.full((SIZE,SIZE),-np.inf)
+    img=np.empty((size,size,3),dtype=np.uint8);img[:]=BG
+    depth=np.full((size,size),-np.inf)
     light=np.array([0.4,-0.6,0.7]);light/=np.linalg.norm(light)
+    tex=np.asarray(mesh.visual.material.baseColorTexture.convert('RGB')) if textured else None
     for k,face in enumerate(mesh.faces):
         if mesh.face_normals[k]@view<=1e-8:continue
         a,b,c=xy[face]
         lo=np.maximum(np.floor(np.min(xy[face],axis=0)).astype(int),0)
-        hi=np.minimum(np.ceil(np.max(xy[face],axis=0)).astype(int)+1,SIZE)
+        hi=np.minimum(np.ceil(np.max(xy[face],axis=0)).astype(int)+1,size)
         x0,y0=lo;x1,y1=hi
         if x0>=x1 or y0>=y1:continue
         yy,xx=np.mgrid[y0:y1,x0:x1];xx=xx+0.5;yy=yy+0.5
@@ -43,7 +44,6 @@ def raster(mesh,view,up,*,textured=False,night=False):
         dst[mask]=dz[mask]
         shade=0.68+0.32*max(0.,mesh.face_normals[k]@light)
         if textured:
-            tex=np.asarray(mesh.visual.material.baseColorTexture.convert('RGB'))
             uv=mesh.visual.uv[face]
             sample=wa[mask,None]*uv[0]+wb[mask,None]*uv[1]+wc[mask,None]*uv[2]
             tx=np.floor((sample[:,0]%1)*tex.shape[1]).astype(int)%tex.shape[1]
