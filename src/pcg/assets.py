@@ -7,12 +7,9 @@ cross-module exclusion policy belong to PCG. Local +X tangent, -Y outward,
 from dataclasses import dataclass, asdict
 import hashlib
 import json
-import math
 from ._grammar_boxes import _oriented_box
-from .architecture import ArchitecturePlan
+from .architecture import ArchitecturePlan, BALCONY_DEPTH, BALCONY_WIDTH_EXTRA, BALCONY_BASE, BALCONY_SLAB, BALCONY_HEIGHT
 from .footprint import Footprint
-from shapely.geometry import Polygon
-from shapely.ops import unary_union
 
 
 @dataclass(frozen=True)
@@ -68,18 +65,18 @@ def parts(recipe,lod):
     # Frame is mounted at the same aperture mouth for both LODs;
     # the recessed glazing remains a separate facade surface.
     y=-.018
-    if recipe.family in ("window","door"):
-        role=recipe.family+"_frame"
+    if recipe.family in ("window","door","balcony_door"):
+        role="window_frame" if recipe.family=="balcony_door" else recipe.family+"_frame"
         p=[Part(role,(x,y,h/2),(t,.036,h)) for x in (-w/2+t/2,w/2-t/2)]
         p.extend(Part(role,(0,y,z),(w-2*t,.036,t)) for z in (t/2,h-t/2))
-        if recipe.family=="window" and lod==0:
+        if recipe.family in ("window","balcony_door") and lod==0:
             p.append(Part("window_mullion",(0,y,h/2),(t*.7,.036,h-2*t)))
-        if recipe.family=="door":
+        if recipe.family in ("door","balcony_door"):
             p.append(Part("door_handle",(w*.28,y-.035,h*.52),(.04,.06,.10)))
         return tuple(p)
     if recipe.family=="balcony":
-        d=.75; t=.06
-        p=[Part("balcony_slab",(0,-d/2,.06),(w,d,.12)),
+        d=BALCONY_DEPTH; t=.06
+        p=[Part("balcony_slab",(0,-d/2,BALCONY_SLAB/2),(w,d,BALCONY_SLAB)),
            Part("balcony_rail",(0,-d+t/2,1.04),(w,t,.08)),
            Part("balcony_rail",(-w/2+t/2,-(d-t)/2,.59),(t,d-t,.94)),
            Part("balcony_rail",(w/2-t/2,-(d-t)/2,.59),(t,d-t,.94))]
@@ -108,8 +105,6 @@ def plan_assets(f:Footprint,plan:ArchitecturePlan):
     if f.digest()!=plan.footprint_digest:
         raise ValueError("footprint mismatch")
     recipes={}; placements=[]; rejected=[]
-    balconies=[]
-    poly=f.polygon()
     def add(s,o,recipe,origin):
         recipes[recipe.id]=recipe
         tangent=((s.end[0]-s.start[0])/s.length,(s.end[1]-s.start[1])/s.length)
@@ -120,20 +115,12 @@ def plan_assets(f:Footprint,plan:ArchitecturePlan):
         for o in s.openings:
             u=o.u+o.width/2
             add(s,o,Recipe(o.role,o.width,o.height,o.recess),s.point(u,o.z))
-            # Illustrative apartment slab/rail module only on upper exterior
-            # bays, with a clear margin to adjacent walls and other modules.
-            if plan.profile.id!="apartments" or s.courtyard or o.role!="window" or o.floor==0:
-                continue
-            w=o.width+.3; z=plan.floor_levels[o.floor]+.05
-            # Projected balcony must lie outside the footprint, fit within
-            # facade length and avoid other balconies at overlapping heights.
-            if u-w/2<.15 or u+w/2>s.length-.15 or z+1.08>plan.floor_levels[o.floor+1]:
-                rejected.append((o.id,"balcony_fit"));continue
-            q=Polygon([s.point(x,0,depth)[:2] for x,depth in
-                       ((u-w/2,0),(u+w/2,0),(u+w/2,-.75),(u-w/2,-.75))])
-            if q.intersection(poly).area>1e-9 or any(q.intersection(other).area>1e-9 and z<top and z+1.08>bottom for other,bottom,top in balconies):
-                rejected.append((o.id,"balcony_intersection"));continue
-            balconies.append((q,z,z+1.08))
-            add(s,o,Recipe("balcony",w,1.08,0.),s.point(u,z))
+            # The canonical plan already tested balcony fit and access.
+            # Never independently select or reject a balcony in an LOD pass.
+            if o.role=="balcony_door":
+                if s.courtyard or o.floor==0:
+                    raise ValueError("invalid balcony anchor")
+                add(s,o,Recipe("balcony",o.width+BALCONY_WIDTH_EXTRA,BALCONY_HEIGHT,0.),
+                    s.point(u,plan.floor_levels[o.floor]+BALCONY_BASE))
     return AssetPlan(plan.digest(),tuple(recipes[k] for k in sorted(recipes)),
                      tuple(placements),tuple(rejected))
