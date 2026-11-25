@@ -67,3 +67,35 @@ Run `PYTHONPATH=src python lab/terrain_gis.py` after the L5.4 lab to produce an 
 
 ### Dependency review
 Rasterio 1.4.3, upstream tag commit `7f8bda2e32df5b5eefc6e1ea6b5f04a946567ede`, BSD-3-Clause ([license](https://github.com/rasterio/rasterio/blob/7f8bda2e32df5b5eefc6e1ea6b5f04a946567ede/LICENSE.txt)). Inspected `rasterio/io.py` MemoryFile, `rasterio/transform.py` affine/pixel-center API and setup.py dependencies: GDAL native extension, affine, attrs, certifi, click, cligj, numpy, click-plugins and pyparsing (importlib-metadata only on older Python). Uses installed library, no copied upstream code. Direct package pinned; transitive/GDAL versions recorded in CI, not fully locked yet. Rasterio solves raster decoding and georeferencing; small explicit interpolation/NoData and foundation policy remain PCG adapters.
+
+## L5.6 — local package compiler and review gate
+
+The integrated compiler accepts a local JSON package, e.g.:
+
+```json
+{
+  "schema_version": 1,
+  "frame": "frame.json",
+  "bbox_wsen": [39.91, 43.42, 39.94, 43.44],
+  "sources": {
+    "osm": {"manifest": "osm.snapshot.json", "payload": "osm.geojson"},
+    "overture_building": {"manifest": "overture.snapshot.json", "payload": "overture.geojson"},
+    "overture_part": {"manifest": "parts.snapshot.json", "payload": "parts.geojson"}
+  },
+  "dtm": {"manifest": "dtm.snapshot.json", "payload": "terrain.tif"},
+  "seed": 17
+}
+```
+
+Part layer optional. Paths are local, relative to package directory or absolute. Manifest and raster constraints from L5.1–L5.5 apply. No provider download or hidden use of latest release. Do not store restricted data in this public repository or Actions artifacts.
+
+```sh
+PYTHONPATH=src python lab/compile_gis_pilot.py prepare --package /local/package.json --out /local/prepared
+PYTHONPATH=src python lab/compile_gis_pilot.py compile --package /local/package.json --approvals /local/approvals.json --out /local/compiled --preview
+```
+
+Each output directory must not exist. Review prepare.json before making an approval file. Its package digest binds all source manifests, frame, AOI, seed and graph; graph digest binds candidate membership/metrics. Approval JSON fields: schema_version (1), package_digest, graph_digest, approvals (array of group_id, building_id, geometry_source {source_id, feature_id}, reason). Do not approve a geometric candidate as actual identity without independent evidence. The compiler rechecks both digests and refuses stale approvals. Unapproved groups, invalid attributes, part layers and rejection reasons stay in output. No automatic split/merge or source transfer.
+
+Compiler integration reuses existing polygon massing, facade plans, opening meshes, shared material/asset recipes, occupancy and DTM. Supported flat and convex hip single polygons (holes supported for flat). Unsupported gable facade integration, roof fallback, ambiguous identity, unresolved attributes, elevated buildings and invalid terrain sampling require review. All intersecting building render envelopes in the approved batch are conservatively rejected; attached/party-wall complexes remain for L6. This is not a complete building collision test and does not compare against unapproved geometry. No new dependency. Semantic welded shell validity is checked independently of split rendering geometry. Actual footprint retained in source report; canonical building-local copy preserves area/holes. Each building receives two neutral day/night GLBs and a semantic sidecar; GLB local Y-up converts to Z-up (x,-z,y) then adds anchor_local_z_up; anchor_projected_enh includes WorldFrame origin. This avoids storing large projected coordinates in GLB float32 vertices. No integrated foundation mesh or terrain surface; DTM proposes a horizontal floor datum. No scene tile pack or native engine claim.
+
+The mandatory synthetic lab constructs two supported buildings (hip house and flat courtyard office), one approved invalid record and one unapproved group using original synthetic inputs; checks actual GLB roundtrip and optional CPU views from reloaded meshes. Real Adler acceptance is a separate stop gate: supply authorized pinned OSM/Overture exports, DTM aligned to actual host, explicit approval ledger and an independently reviewed subset (source feature IDs, geometry/identity verdict, floor/height/roof observations with provenance, ground elevation reference and uncertainty). Record discrepancies and unresolved cases, inspect aerial/street-scale previews, and report coverage/accuracy separately from synthetic checks. No real data or independent reference evidence has been provided yet.
