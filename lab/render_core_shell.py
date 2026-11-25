@@ -98,3 +98,10 @@ if __name__=="__main__":
 
     from compile_gis_pilot import synthetic_lab as compile_gis_pilot
     compile_gis_pilot()
+
+    # Isolated research lane; remove this hook before any production merge.
+    from benchmark_condor import main as benchmark_condor
+    benchmark_condor()
+
+    from render_condor_atlas import main as render_condor_atlas
+    render_condor_atlas()
