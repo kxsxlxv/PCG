@@ -95,3 +95,6 @@ if __name__=="__main__":
 
     from terrain_gis import main as terrain_gis
     terrain_gis()
+
+    from compile_gis_pilot import synthetic_lab as compile_gis_pilot
+    compile_gis_pilot()
