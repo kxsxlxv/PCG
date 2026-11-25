@@ -61,3 +61,6 @@ if __name__=="__main__":
 
     from benchmark_oss_grammar import main as benchmark_grammar
     benchmark_grammar()
+
+    from render_facade_plan import main as render_facades
+    render_facades()
