@@ -86,3 +86,6 @@ if __name__=="__main__":
 
     from normalize_gis import synthetic_lab
     synthetic_lab()
+
+    from match_gis import main as match_gis
+    match_gis()
