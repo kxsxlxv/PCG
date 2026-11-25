@@ -47,6 +47,12 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/compile_zero_geometry_tile.py
+      - name: Multi-tile compiler and cross-language ABI
+        env:
+          PYTHONPATH: src
+        run: |
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o /tmp/pcg_zero_tile_abi
+          python lab/compile_zero_tiles.py --self-test --decoder /tmp/pcg_zero_tile_abi
       - name: Run research probes
         run: python lab/run_probes.py
       - name: Report

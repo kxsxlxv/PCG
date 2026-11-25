@@ -61,7 +61,7 @@ def lookup(uv,r,cells):
         role[ok]=3;local[ok]=np.column_stack((x[ok],y[ok]))
     return role,variant,local
 
-def compile_record(facade,plan,h,cells,intents):
+def compile_record(facade,plan,h,cells,intents,audit_samples=4096):
     p=plan.profile;floors=len(plan.floor_levels)-1
     centers=[] if facade.party else window_offsets(facade.length,p.window_width,p.spacing,p.margin)
     r={"bays":len(centers),"first_center":centers[0] if centers else 0.,
@@ -89,7 +89,7 @@ def compile_record(facade,plan,h,cells,intents):
     # Compare direct canonical rectangle membership to packed lookup,
     # independent of render and all stable IDs.
     rng=np.random.default_rng(r["seed"])
-    sample=rng.random((4096,2))*[facade.length,h]
+    sample=rng.random((audit_samples,2))*[facade.length,h]
     expected=np.zeros(len(sample),np.uint8);ev=np.zeros(len(sample),np.uint8)
     for o in facade.openings:
         mask=(sample[:,0]>=o.u)&(sample[:,0]<o.u+o.width)&(sample[:,1]>=o.z)&(sample[:,1]<o.z+o.height)
@@ -100,22 +100,23 @@ def compile_record(facade,plan,h,cells,intents):
     np.testing.assert_array_equal(actual,expected);np.testing.assert_array_equal(av,ev)
     return r
 
-def compile_scene(cases):
+def compile_scene(cases,audit_samples=4096):
     table=[];cells=[];records=[];groups={role:{k:[] for k in ("v","n","uv0","uv1","color","f")} for role in GROUPS}
     for i,c in enumerate(sorted(cases,key=lambda a:a["id"])):
-        f=Footprint("fixture:"+c["id"],c["outer"],c.get("holes",[]))
-        profile=PROFILES[("house","apartments","office")[i%3]]
-        floors=2+i%3;h=floors*(3.2 if profile.id=="office" else 3.)
+        f=Footprint(c.get("building_id","fixture:"+c["id"]),c["outer"],c.get("holes",[]))
+        profile=PROFILES[c.get("profile",("house","apartments","office")[i%3])]
+        floors=c.get("floors",2+i%3);h=c.get("eave_m",floors*(3.2 if profile.id=="office" else 3.))
         mass=build_massing(f,h,c["roof"],c.get("rise",0.))
-        assert bool(mass.fallback_reason)==bool(c.get("fallback",False)),c["id"]
+        if "fallback" in c:assert bool(mass.fallback_reason)==bool(c["fallback"]),c["id"]
         shell=mass.shell
         v=np.asarray(shell.vertices,dtype=np.float64)
         welded=trimesh.Trimesh(vertices=v,faces=[t for _,t in shell.triangles()],process=False)
         assert welded.is_watertight and welded.is_winding_consistent and welded.volume>0
-        party=((0,1),) if c["id"]=="L" else ()
+        party=tuple(tuple(e) for e in c.get("party_edges",((0,1),) if c["id"]=="L" else ()))
         plan=plan_facades(f,h,floors,profile,party_edges=party)
         intents={x.opening_id:x for x in plan_night(plan)}
-        offset=np.array([(i%4)*24.,(i//4)*24.,0.])
+        offset=np.asarray(c.get("offset",[(i%4)*24.,(i//4)*24.,0.]),dtype=np.float64)
+        assert offset.shape==(3,) and np.isfinite(offset).all()
         matched=set();roof=[];before=sum(len(g["f"]) for g in groups.values())
         for s in shell.surfaces:
             p=v[list(s.vertices)]
@@ -130,7 +131,7 @@ def compile_scene(cases):
                 found=[a for a in plan.facades if np.allclose(p[0,:2],a.start,atol=1e-9,rtol=0) and np.allclose(p[1,:2],a.end,atol=1e-9,rtol=0)]
                 assert len(found)==1,(c["id"],s.id)
                 facade=found[0];assert facade.id not in matched;matched.add(facade.id)
-                r.update(compile_record(facade,plan,h,cells,intents))
+                r.update(compile_record(facade,plan,h,cells,intents,audit_samples))
                 direction=(np.asarray(facade.end)-facade.start)/facade.length
                 layout=np.column_stack(((p[:,:2]-facade.start)@direction,p[:,2]))
             else:
