@@ -12,7 +12,7 @@ from pcg.facade_mesh import facade_triangles
 from render_l2_massing import raster, VIEWS, SIZE
 
 PALETTE={"wall":[205,192,168,255],"window":[45,78,104,255],
-         "door":[90,58,36,255],"reveal":[143,132,117,255],
+         "door":[90,58,36,255],"balcony_door":[45,78,104,255],"reveal":[143,132,117,255],
          "roof":[150,75,55,255],"base":[110,110,110,255]}
 
 
