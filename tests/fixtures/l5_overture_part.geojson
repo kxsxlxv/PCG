@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ov-p",
+      "properties": {
+        "id": "ov-p",
+        "building_id": "ov-b",
+        "height": 6,
+        "min_height": 3,
+        "num_floors": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.921,
+              43.43
+            ],
+            [
+              39.92115,
+              43.43
+            ],
+            [
+              39.92115,
+              43.4301
+            ],
+            [
+              39.921,
+              43.4301
+            ],
+            [
+              39.921,
+              43.43
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ov-a",
+      "properties": {
+        "id": "ov-a",
+        "height": 7.5,
+        "num_floors": 2,
+        "roof_shape": "hip",
+        "class": "residential",
+        "sources": [
+          {
+            "dataset": "synthetic"
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.92,
+              43.43
+            ],
+            [
+              39.92015,
+              43.43
+            ],
+            [
+              39.92015,
+              43.4301
+            ],
+            [
+              39.92,
+              43.4301
+            ],
+            [
+              39.92,
+              43.43
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ov-b",
+      "properties": {
+        "id": "ov-b",
+        "height": 12,
+        "num_floors": 4
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                39.921,
+                43.43
+              ],
+              [
+                39.92115,
+                43.43
+              ],
+              [
+                39.92115,
+                43.4301
+              ],
+              [
+                39.921,
+                43.4301
+              ],
+              [
+                39.921,
+                43.43
+              ]
+            ]
+          ],
+          [
+            [
+              [
+                39.9213,
+                43.43
+              ],
+              [
+                39.92145,
+                43.43
+              ],
+              [
+                39.92145,
+                43.4301
+              ],
+              [
+                39.9213,
+                43.4301
+              ],
+              [
+                39.9213,
+                43.43
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ov-c",
+      "properties": {
+        "id": "ov-c",
+        "height": null,
+        "num_floors": 2.5,
+        "is_underground": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.924,
+              43.43
+            ],
+            [
+              39.92415,
+              43.43
+            ],
+            [
+              39.92415,
+              43.4301
+            ],
+            [
+              39.924,
+              43.4301
+            ],
+            [
+              39.924,
+              43.43
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
