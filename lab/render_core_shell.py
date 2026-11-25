@@ -64,3 +64,6 @@ if __name__=="__main__":
 
     from render_facade_plan import main as render_facades
     render_facades()
+
+    from render_asset_placement import main as render_assets
+    render_assets()
