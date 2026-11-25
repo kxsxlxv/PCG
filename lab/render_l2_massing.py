@@ -14,7 +14,7 @@ SIZE=384
 BG=(245,243,238)
 
 
-def raster(mesh,view,up,*,textured=False):
+def raster(mesh,view,up,*,textured=False,night=False):
     view=np.array(view,dtype=float);view/=np.linalg.norm(view)
     right=np.cross(up,view);right/=np.linalg.norm(right)
     up=np.cross(view,right)
@@ -51,7 +51,17 @@ def raster(mesh,view,up,*,textured=False):
             rgb=tex[ty,tx]
         else:
             rgb=mesh.visual.vertex_colors[face,:3].mean(axis=0)
-        img[y0:y1,x0:x1][mask]=np.uint8(rgb*shade)
+        if night:
+            if not textured:raise ValueError("night diagnostic requires PBR materials")
+            srgb=rgb.astype(np.float64)/255
+            linear=np.where(srgb<=.04045,srgb/12.92,((srgb+.055)/1.055)**2.4)
+            factor=mesh.visual.material.emissiveFactor
+            emission=np.zeros(3) if factor is None else np.asarray(factor)
+            linear=np.clip(linear*shade*.055+emission,0,1)
+            rgb=np.where(linear<=.0031308,12.92*linear,1.055*linear**(1/2.4)-.055)*255
+            img[y0:y1,x0:x1][mask]=np.uint8(np.round(np.clip(rgb,0,255)))
+        else:
+            img[y0:y1,x0:x1][mask]=np.uint8(rgb*shade)
     if not textured:
         assert np.isfinite(depth).sum()>100
     return Image.fromarray(img),depth
