@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 from urllib.parse import urlsplit
 
-from pyproj import CRS, Transformer
+from pyproj import CRS, Transformer, network
 from .contracts import number
 
 
@@ -173,6 +173,8 @@ class WorldFrame:
         lon, lat = number(lon, "longitude"), number(lat, "latitude")
         if not (-180 <= lon <= 180 and -90 < lat < 90):
             raise ValueError("invalid longitude/latitude")
+        if network.is_network_enabled():
+            raise ValueError("PROJ network access must be disabled for offline projection")
         transformer = Transformer.from_crs("OGC:CRS84", self.horizontal_crs,
                                            always_xy=True, allow_ballpark=False)
         east, north = transformer.transform(lon, lat, errcheck=True)
