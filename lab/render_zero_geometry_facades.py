@@ -172,6 +172,7 @@ def main():
         np.testing.assert_array_equal(dep,reference)
         im.save(OUT/f"{'close' if close else 'block'}_dense.png")
     sheet.save(OUT/"contact.png")
+    material_variation(v,uv,ids,table,maps)
     groups_by_material=len({(r["role"],r["family"]) for r in table})
     report={"buildings":12,"triangles":len(v)//3,"split_vertices":len(v),
             "surface_records":len(table),"separate_role_material_groups":groups_by_material,
@@ -185,5 +186,95 @@ def main():
     thumb=sheet.copy();thumb.thumbnail((960,800));buf=io.BytesIO();thumb.save(buf,format="JPEG",quality=65,optimize=True)
     s=base64.b64encode(buf.getvalue()).decode()
     for i in range(0,len(s),4000):print(f"ZERO_GEOMETRY_PREVIEW_{i//4000:03d} "+s[i:i+4000],flush=True)
+
+
+def material_variation(v,uv,ids,table,maps):
+    """Grouped same-mesh experiment. Shared procedural field, not a per-building image."""
+    from pcg._material_patterns import noise
+    global shader
+    original=shader
+    field=noise(256,12,np.random.default_rng(872))
+    # All buildings use the same shared mask; stable offsets select distinct regions.
+    def sample_field(u,z,scale,offset):
+        x=(u/scale+offset[0])%1*256
+        y=(z/scale+offset[1])%1*256
+        i=np.floor(x).astype(int);j=np.floor(y).astype(int)
+        fx=x-i;fy=y-j
+        return ((1-fx)*(1-fy)*field[j,i]+fx*(1-fy)*field[j,(i+1)%256]
+                +(1-fx)*fy*field[(j+1)%256,i]+fx*fy*field[(j+1)%256,(i+1)%256])
+    def variation(sample,r,maps,mode,dense=False):
+        if mode not in ("macro","weather","weather_night"):
+            return original(sample,r,maps,mode,dense)
+        daymode="night" if mode=="weather_night" else "day"
+        c,e=original(sample,r,maps,daymode,dense)
+        if r["role"]!="wall":return c,e
+        u,z=sample.T
+        gx=u/r["length"]*r["bays"]*(2 if dense else 1);gy=z/3
+        bx=np.floor(gx).astype(int);fl=np.floor(gy).astype(int)
+        x=gx%1;y=gy%1
+        valid=(bx>=0)&(bx<r["bays"]*(2 if dense else 1))&(fl>=0)&(fl<r["floors"])
+        win=valid&(x>.23)&(x<.77)&(y>.25)&(y<.82)
+        door=valid&r["entry"]&(fl==0)&(bx==r["bays"]*(2 if dense else 1)//2)&(x>.23)&(x<.77)&(y<.80)
+        wall=~(win|door)
+        a=seed(r["building"]);b=r["seed"]
+        offset=((b&65535)/65536,(b>>16)/65536)
+        macro=sample_field(u,z,38.,offset)
+        broad=sample_field(u,z,105.,((a&65535)/65536,(a>>16)/65536))
+        c[wall]*=(.76+.35*macro[wall]+.15*broad[wall])[:,None]
+        if mode in ("weather","weather_night"):
+            age=.25+.6*((a%997)/996)
+            ground=np.exp(-np.maximum(z,0)/.65)*(.4+.6*macro)
+            # Short runoff below each sill, limited to its horizontal neighborhood.
+            streak=(np.maximum(0,1-np.abs(x-.28)/.065)+np.maximum(0,1-np.abs(x-.72)/.065))
+            sill=valid*streak*np.exp(-np.maximum(.25-y,0)*7)*(y<.25)
+            eave=np.exp(-np.abs(r["height"]-z)/.45)*(.2+.8*macro)
+            patch=np.clip((broad-.69)/.25,0,1)*.3
+            dirt=np.clip(age*(.40*ground+.25*sill+.20*eave+patch),0,.65)
+            c[wall]=c[wall]*(1-dirt[wall,None])+srgb_decode(np.array([.26,.23,.17]))*dirt[wall,None]
+        return c,e
+    # Reference renderer keys the night exposure off mode; use a wrapper for night.
+    sheet=Image.new("RGB",(640*3,640*2+32),(240,240,240))
+    ImageDraw.Draw(sheet).text((8,8),"Same geometry / baseline, macro breakup, semantic weathering / CPU diffuse",fill=(0,0,0))
+    report={"shared_mask_count":1,"shared_mask_size":256,"lanes":[],"renderer":"CPU diffuse, nearest base sampling; no PBR or SDK"}
+    try:
+        shader=variation
+        for row,close in enumerate((True,False)):
+            reference=None
+            for col,mode in enumerate(("day","macro","weather")):
+                im,dep=render(v,uv,ids,table,maps,mode,close=close)
+                if reference is None:reference=dep
+                else:np.testing.assert_array_equal(dep,reference)
+                ImageDraw.Draw(im).text((8,8),mode,fill=(0,0,0))
+                im.save(OUT/f"variation_{'close' if close else 'block'}_{mode}.png")
+                sheet.paste(im,(col*640,row*640+32))
+                report["lanes"].append({"mode":mode,"view":"close" if close else "block","same_depth":True})
+        # Explicit semantic isolation, deterministic output and unchanged night emission.
+        checked=0
+        for r in table:
+            if r["role"]!="wall":continue
+            u,z=np.meshgrid(np.linspace(.001,r["length"]-.001,120),np.linspace(.001,r["height"]-.001,100))
+            samples=np.column_stack((u.ravel(),z.ravel()))
+            c0,e0=original(samples,r,maps,"night")
+            c1,e1=variation(samples,r,maps,"weather_night")
+            c2,e2=variation(samples,r,maps,"weather_night")
+            np.testing.assert_array_equal(c1,c2);np.testing.assert_array_equal(e1,e2)
+            np.testing.assert_array_equal(e0,e1)
+            lit=np.any(e0>0,axis=1)
+            np.testing.assert_array_equal(c0[lit],c1[lit])
+            assert np.isfinite(c1).all() and c1.min()>=0
+            checked+=len(samples)
+        report["semantic_samples_checked"]=checked
+        report["night_emission_unchanged"]=True
+        report["lit_glass_color_unchanged"]=True
+        report["triangles"]=len(v)//3
+        report["opening_triangles_added"]=0
+    finally:
+        shader=original
+    sheet.save(OUT/"variation_contact.png")
+    (OUT/"variation_report.json").write_text(json.dumps(report,indent=2))
+    print("VARIATION_REPORT "+json.dumps(report),flush=True)
+    thumb=sheet.copy();thumb.thumbnail((960,800));buf=io.BytesIO();thumb.save(buf,format="JPEG",quality=65,optimize=True)
+    data=base64.b64encode(buf.getvalue()).decode()
+    for i in range(0,len(data),4000):print(f"VARIATION_PREVIEW_{i//4000:03d} "+data[i:i+4000],flush=True)
 
 if __name__=="__main__":main()
