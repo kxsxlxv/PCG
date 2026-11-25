@@ -85,6 +85,7 @@ class ArchitecturePlan:
     profile: Profile
     floor_levels: tuple[float,...]
     facades: tuple[Facade,...]
+    balcony_fallbacks: tuple[tuple[str,str],...] = ()
 
     def canonical(self):
         return json.dumps(asdict(self),sort_keys=True,separators=(",",":"),allow_nan=False)
@@ -115,6 +116,7 @@ def plan_facades(f:Footprint,eave_m,levels,profile:Profile,*,party_edges=(),entr
         if eligible:entrance_edge=(0,-max(eligible)[1])
     facades=[]
     balconies=[]
+    balcony_fallbacks=[]
     polygon=f.polygon()
     clearance=.05
     for r,ring in enumerate(rings):
@@ -143,6 +145,7 @@ def plan_facades(f:Footprint,eave_m,levels,profile:Profile,*,party_edges=(),entr
                         # infeasible balcony leaves an ordinary window, never
                         # an unguarded elevated door.
                         if profile.id=="apartments" and r==0 and floor>0:
+                            reason="balcony_fit"
                             width=profile.window_width+BALCONY_WIDTH_EXTRA
                             left,right=center-width/2,center+width/2
                             base=floors[floor]+BALCONY_BASE
@@ -152,11 +155,14 @@ def plan_facades(f:Footprint,eave_m,levels,profile:Profile,*,party_edges=(),entr
                             if left>=.15 and right<=length-.15 and top<=floors[floor+1] and door_bottom+door_height+clearance<=floors[floor+1]:
                                 tx,ty=(b[0]-a[0])/length,(b[1]-a[1])/length
                                 q=Polygon([(a[0]+x*tx+d*normal[0],a[1]+x*ty+d*normal[1]) for x,d in ((left,0),(right,0),(right,BALCONY_DEPTH),(left,BALCONY_DEPTH))])
+                                reason="balcony_intersection"
                                 if q.intersection(polygon).area<=1e-9 and not any(q.intersection(other).area>1e-9 and base<high and top>low for other,low,high in balconies):
                                     balconies.append((q,base,top))
                                     role="balcony_door"
                                     bottom=door_bottom
                                     height=door_height
+                            if role=="window":
+                                balcony_fallbacks.append((f"{fid}:window:{floor}:{bay}",reason))
                         openings.append(Opening(f"{fid}:window:{floor}:{bay}",role,floor,u,bottom,profile.window_width,height,profile.recess))
             facades.append(Facade(fid,a,b,length,normal,r>0,suppressed,tuple(openings)))
-    return ArchitecturePlan(f.building_id,f.digest(),profile,floors,tuple(facades))
+    return ArchitecturePlan(f.building_id,f.digest(),profile,floors,tuple(facades),tuple(balcony_fallbacks))
