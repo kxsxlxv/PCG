@@ -83,3 +83,6 @@ if __name__=="__main__":
                  "artifacts/l5-source-snapshot/report.json")
     assert result["authorization_declaration"]=="synthetic_fixture"
     assert result["feature_count"]==1 and result["declared_geometry_types"]=={"Polygon":1}
+
+    from normalize_gis import synthetic_lab
+    synthetic_lab()
