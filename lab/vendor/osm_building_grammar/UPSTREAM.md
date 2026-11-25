@@ -1,0 +1,10 @@
+# OSS baseline: OSM Building Grammar
+Upstream: https://github.com/p-schulz/osm_building_grammar
+Pinned commit: 81f1b50eae048645b2e620056a7cb2c84709bcfa.
+License: Apache-2.0 (upstream LICENSE retained; NOTICE not present at root).
+Upstream addon metadata names FZI Forschungszentrum Informatik, 2026.
+Unmodified source blobs: grammar.py 5da62ebae9553c0d4e04910632486a344742b89b; config.py aedd401c0ad2cd311d284017314a95cc31a98cce; LICENSE 261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64.
+Local package initializer is PCG-created; no Blender wrapper or external textures included.
+Core generate_building_spec takes a single ring, tags and config, returns semantic MeshSpec objects and floor heights. Config and grammar use stdlib only. Baseline checks three synthetic styles using the actual upstream code, deterministic result, finite indexed triangles, GLB roundtrip and depth-buffer renders. These are not regionally verified profiles. Existing upstream windows are overlay geometry, not apertures; building hole support, shared plan across LOD, party-wall exclusion, and canonical asset anchors remain PCG integration tasks. Do not adopt donor massing over validated L2. No upstream code is in production src/ yet.
+
+Other audited candidates (not vendored): Condor Buildings Generator 26a5d22481c03b0a491abfa498a5ab795cb223b7: roof_polyskel.py uses mathutils/bpypolyskel, fixed rise, holesInfo=None; 1-based mesh indices, per-face UV; candidate UV and roof reference after license review. OSM2World 8a1c17e6a25f5238ca532c9460f69401151b4fd7: BuildingPart and Roof Java APIs, tag/part semantics; candidate independent baseline. py_straight_skeleton 7ee4487dca1db0ebc7819196220e6fcfcf2cf4b7: compute_skeleton(exterior, holes), nodes/time/faces; benchmark for L6, no claim of robust weighted skeleton. meshoptimizer 8547fc321b782a2235dfc14c65a346a640544cd8: MIT header, remap/cache/fetch/simplifyWithAttributes; use in render mesh optimization later. No license conclusion on other donors without checking their relevant source and distribution terms.

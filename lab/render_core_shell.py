@@ -58,3 +58,6 @@ if __name__=="__main__":
     main()
     from render_l2_massing import main as render_l2
     render_l2()
+
+    from benchmark_oss_grammar import main as benchmark_grammar
+    benchmark_grammar()
