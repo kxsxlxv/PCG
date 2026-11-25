@@ -76,3 +76,10 @@ if __name__=="__main__":
 
     from render_far_emission import main as render_far
     render_far()
+
+    from audit_source_snapshot import audit
+    result=audit("tests/fixtures/l5_synthetic.snapshot.json",
+                 "tests/fixtures/l5_synthetic.geojson",
+                 "artifacts/l5-source-snapshot/report.json")
+    assert result["authorization_declaration"]=="synthetic_fixture"
+    assert result["feature_count"]==1 and result["declared_geometry_types"]=={"Polygon":1}
