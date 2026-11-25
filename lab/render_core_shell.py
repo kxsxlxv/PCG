@@ -89,3 +89,6 @@ if __name__=="__main__":
 
     from match_gis import main as match_gis
     match_gis()
+
+    from resolve_gis import main as resolve_gis
+    resolve_gis()
