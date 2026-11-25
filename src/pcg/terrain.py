@@ -85,6 +85,23 @@ def load_dtm(snapshot:SourceSnapshot,path,frame:WorldFrame):
     return TerrainGrid(snapshot,frame,t,values,valid)
 
 
+def footprint_sample_points(polygon, spacing):
+    """Densified boundaries, one representative point and a bounded interior lattice."""
+    lo,bo,hi,to=polygon.bounds
+    nx=math.ceil((hi-lo)/spacing);ny=math.ceil((to-bo)/spacing)
+    if nx*ny+polygon.length/spacing>100000:
+        return None
+    dense=segmentize(polygon,spacing)
+    points=set((float(x),float(y)) for ring in (dense.exterior,*dense.interiors) for x,y in ring.coords)
+    points.add(tuple(polygon.representative_point().coords[0]))
+    for j in range(ny):
+        y=bo+(j+.5)*spacing
+        for i in range(nx):
+            x=lo+(i+.5)*spacing
+            if polygon.covers(Point(x,y)):points.add((x,y))
+    return sorted(points)
+
+
 def foundation_plan(record,grid:TerrainGrid,*,spacing_m=2.,max_fill_m=3.):
     """Sampling proposal, not a continuous terrain bound or foundation mesh."""
     spacing=number(spacing_m,"spacing_m")
@@ -100,19 +117,10 @@ def foundation_plan(record,grid:TerrainGrid,*,spacing_m=2.,max_fill_m=3.):
     g=from_wkb(bytes.fromhex(record["local_geometry_wkb"]))
     if g.geom_type!="Polygon" or not g.is_valid or g.is_empty:
         return {**result,"status":"review_required","reason":"unsupported_footprint"}
-    lo,bo,hi,to=g.bounds
-    nx=math.ceil((hi-lo)/spacing);ny=math.ceil((to-bo)/spacing)
-    if nx*ny+g.length/spacing>100000:
+    points=footprint_sample_points(g,spacing)
+    if points is None:
         return {**result,"status":"review_required","reason":"sample_budget_exceeded"}
-    dense=segmentize(g,spacing)
-    points=set((float(x),float(y)) for ring in (dense.exterior,*dense.interiors) for x,y in ring.coords)
-    points.add(tuple(g.representative_point().coords[0]))
-    for j in range(ny):
-        y=bo+(j+.5)*spacing
-        for i in range(nx):
-            x=lo+(i+.5)*spacing
-            if g.covers(Point(x,y)):points.add((x,y))
-    samples=[{"x":x,"y":y,"z":grid.sample(x,y)} for x,y in sorted(points)]
+    samples=[{"x":x,"y":y,"z":grid.sample(x,y)} for x,y in points]
     result["samples"]=samples
     result["sample_count"]=len(samples)
     result["missing_count"]=sum(s["z"] is None for s in samples)

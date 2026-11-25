@@ -1,0 +1,2 @@
+# Snapshot verification hashes the fixture payload bytes.
+tests/fixtures/*.geojson text eol=lf

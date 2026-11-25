@@ -31,7 +31,7 @@ VIEWS = (("top",(0,0,1),(0,1,0)),
          ("low_northeast",(1,.65,.22),(0,0,1)))
 
 
-def build_block(fixture):
+def build_block(fixture, lod=0):
     assert fixture["schema_version"]==1 and fixture["frame"]=="local_z_up" and fixture["units"]=="m"
     cases=sorted(fixture["buildings"],key=lambda c:c["id"])
     if len({c["id"] for c in cases})!=len(cases):
@@ -54,8 +54,8 @@ def build_block(fixture):
               for k,t in shell.triangles() if roles[k]!="wall"]
         for facade in plan.facades:
             tris.extend((t.role,t.vertices,t.opening_id)
-                        for t in facade_triangles(facade,h,0))
-        cache={r.id:asset_triangles(r,0) for r in assets.recipes}
+                        for t in facade_triangles(facade,h,lod))
+        cache={r.id:asset_triangles(r,lod) for r in assets.recipes}
         tris.extend((role,tuple(p.point(v) for v in t),None)
                     for p in assets.placements for role,t in cache[p.asset_id])
         vertices=np.array([t for _,t,_ in tris]).reshape(-1,3)
