@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","id":"synthetic-a","properties":{"building":"house","height":7.5},"geometry":{"type":"Polygon","coordinates":[[[39.92,43.43],[39.92015,43.43],[39.92015,43.4301],[39.92,43.4301],[39.92,43.43]]]}}]}
