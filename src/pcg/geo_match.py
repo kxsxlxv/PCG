@@ -127,8 +127,9 @@ def build_graph(left,right,policy=MatchPolicy()):
     akeys={key(f) for f in a};bkeys={key(f) for f in b}
     # Connected components are conflict groups only; never transitive identities.
     unseen=akeys|bkeys;groups=[]
-    while unseen:
-        root=min(unseen);pending=[root];component=set()
+    for root in sorted(unseen):
+        if root not in unseen:continue
+        pending=[root];component=set()
         while pending:
             current=pending.pop()
             if current in component:continue
