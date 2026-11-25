@@ -96,4 +96,6 @@ class AssetTests(unittest.TestCase):
                 for lod in (0,1):
                     self.assertEqual(expected,{t.opening_id for t in facade_triangles(s,9,lod) if t.role=="balcony_door"})
             if len(outer)>4:
+                self.assertTrue(a.rejected)
+                self.assertEqual(a.rejected,p.balcony_fallbacks)
                 self.assertTrue(any(o.role=="window" and o.floor>0 for s in p.facades for o in s.openings))
