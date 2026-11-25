@@ -25,6 +25,10 @@ def raster(mesh,view,up,*,textured=False,night=False,center=(6,5,4),pixels_per_m
     depth=np.full((size,size),-np.inf)
     light=np.array([0.4,-0.6,0.7]);light/=np.linalg.norm(light)
     tex=np.asarray(mesh.visual.material.baseColorTexture.convert('RGB')) if textured else None
+    emissive_tex=None
+    if night and textured and mesh.visual.material.emissiveTexture is not None:
+        from pcg.far_emission import srgb_decode
+        emissive_tex=srgb_decode(np.asarray(mesh.visual.material.emissiveTexture.convert('RGB'),dtype=float)/255)
     for k,face in enumerate(mesh.faces):
         if mesh.face_normals[k]@view<=1e-8:continue
         a,b,c=xy[face]
@@ -57,6 +61,10 @@ def raster(mesh,view,up,*,textured=False,night=False,center=(6,5,4),pixels_per_m
             linear=np.where(srgb<=.04045,srgb/12.92,((srgb+.055)/1.055)**2.4)
             factor=mesh.visual.material.emissiveFactor
             emission=np.zeros(3) if factor is None else np.asarray(factor)
+            if emissive_tex is not None:
+                ex=np.floor((sample[:,0]%1)*emissive_tex.shape[1]).astype(int)%emissive_tex.shape[1]
+                ey=np.floor((-sample[:,1]%1)*emissive_tex.shape[0]).astype(int)%emissive_tex.shape[0]
+                emission=emissive_tex[ey,ex]*emission
             linear=np.clip(linear*shade*.055+emission,0,1)
             rgb=np.where(linear<=.0031308,12.92*linear,1.055*linear**(1/2.4)-.055)*255
             img[y0:y1,x0:x1][mask]=np.uint8(np.round(np.clip(rgb,0,255)))
