@@ -65,16 +65,16 @@ def parts(recipe,lod):
         raise ValueError("unsupported LOD")
     w,h,r=recipe.width,recipe.height,recipe.recess
     t=min(.065,w/8,h/8)
-    # Recess frame projects toward exterior from panel, but stays within
-    # aperture XY extent. At LOD1 mount at facade plane.
-    y=r-.018 if lod==0 else -.018
+    # Frame is mounted at the same aperture mouth for both LODs;
+    # the recessed glazing remains a separate facade surface.
+    y=-.018
     if recipe.family in ("window","door"):
         role=recipe.family+"_frame"
         p=[Part(role,(x,y,h/2),(t,.036,h)) for x in (-w/2+t/2,w/2-t/2)]
         p.extend(Part(role,(0,y,z),(w-2*t,.036,t)) for z in (t/2,h-t/2))
         if recipe.family=="window" and lod==0:
             p.append(Part("window_mullion",(0,y,h/2),(t*.7,.036,h-2*t)))
-        if recipe.family=="door" and lod==0:
+        if recipe.family=="door":
             p.append(Part("door_handle",(w*.28,y-.035,h*.52),(.04,.06,.10)))
         return tuple(p)
     if recipe.family=="balcony":
