@@ -74,7 +74,7 @@ def _assemble(bid, verts, specs, hip=False):
             raise ValueError("nonmanifold or inconsistent polygon shell")
         roles = {p[0].role for p in pair}
         role = ("seam" if roles == {"base"} else
-                "hip" if roles == {"roof"} and hip else
+                ("ridge" if math.isclose(verts[a][2],verts[b][2],rel_tol=0.,abs_tol=1e-9) else "hip") if roles == {"roof"} and hip else
                 "seam" if roles == {"roof"} else
                 "foundation" if "base" in roles else
                 "eave" if "roof" in roles else "corner")
