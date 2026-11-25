@@ -43,6 +43,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/render_zero_geometry_facades.py
+      - name: Neutral zero-geometry tile integration reference
+        env:
+          PYTHONPATH: src
+        run: python lab/compile_zero_geometry_tile.py
       - name: Run research probes
         run: python lab/run_probes.py
       - name: Report

@@ -100,13 +100,15 @@ def shader(uv,r,maps,mode,dense=False):
         emission[lit&(hh%4==0)]=np.array([.66,.69,.57])
     return color,emission
 
-def render(v,uv,ids,table,maps,mode,dense=False,close=False):
+def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None):
     size=640
     view=np.array([1.,-1.5,.85]);view/=np.linalg.norm(view)
     right=np.cross([0,0,1],view);right/=np.linalg.norm(right)
     up=np.cross(view,right)
     center=np.array([6.,4.,4.]) if close else np.array([39.,27.,5.])
     ppm=34 if close else 6.1
+    if center_override is not None:center=np.asarray(center_override,dtype=float)
+    if ppm_override is not None:ppm=float(ppm_override)
     pts=v-center
     xy=np.column_stack((pts@right,-pts@up))*ppm+size/2
     z=pts@view
