@@ -29,6 +29,12 @@ jobs:
           python -m pip install -r lab/requirements.txt
           mkdir -p artifacts
           python -m pip freeze > artifacts/versions.txt
+      - name: Test core contracts
+        env:
+          PYTHONPATH: src
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests/unit -v 2>&1 | tee artifacts/core-tests.log
       - name: Run research probes
         run: python lab/run_probes.py
       - name: Report
