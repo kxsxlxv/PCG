@@ -1,0 +1,11 @@
+{
+  "building_id": "house-1",
+  "width_m": 12,
+  "depth_m": 8,
+  "eave_m": 6,
+  "roof": "gable",
+  "roof_rise_m": 2,
+  "schema_version": 1,
+  "units": "m",
+  "frame": "local_z_up"
+}
