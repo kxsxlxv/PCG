@@ -96,8 +96,18 @@ class SourceSnapshot:
             raise ValueError("explicit local authorization declaration required")
         if not isinstance(self.sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", self.sha256):
             raise ValueError("expected lowercase SHA-256")
-        if self.format != "geojson" or self.horizontal_crs not in ("OGC:CRS84", "EPSG:4326") or self.axis_order != "lon_lat":
-            raise ValueError("L5.1 supports WGS84 lon/lat GeoJSON only")
+        if self.format == "geojson":
+            if self.horizontal_crs not in ("OGC:CRS84", "EPSG:4326") or self.axis_order != "lon_lat":
+                raise ValueError("expected WGS84 lon/lat GeoJSON")
+        elif self.format == "geotiff":
+            crs = CRS.from_user_input(self.horizontal_crs)
+            axes = crs.axis_info
+            if self.axis_order != "east_north" or not crs.is_projected or len(axes) != 2 or tuple(a.direction for a in axes) != ("east","north") or any(a.unit_conversion_factor != 1.0 for a in axes):
+                raise ValueError("expected projected east/north metre GeoTIFF")
+            if self.vertical_reference == "not_applicable_2d":
+                raise ValueError("DTM requires explicit vertical datum")
+        else:
+            raise ValueError("unsupported source format")
         # Snapshot epoch is a declared ISO date or explicitly unknown; retrieval
         # date is distinct and must contain a timezone. No invented capture date.
         if self.epoch != "unknown":
@@ -125,8 +135,8 @@ class SourceSnapshot:
 
 def read_verified_geojson(snapshot: SourceSnapshot, payload_path):
     """Check exact bytes before parsing the same byte buffer; no network access."""
-    if not isinstance(snapshot, SourceSnapshot):
-        raise ValueError("expected SourceSnapshot")
+    if not isinstance(snapshot, SourceSnapshot) or snapshot.format != "geojson":
+        raise ValueError("expected GeoJSON SourceSnapshot")
     raw = Path(payload_path).read_bytes()
     actual = hashlib.sha256(raw).hexdigest()
     if actual != snapshot.sha256:
