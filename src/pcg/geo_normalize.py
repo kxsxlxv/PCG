@@ -125,7 +125,7 @@ def observations(p,kind):
     for key,attr,reference in (
             ("roof:shape" if osm else "roof_shape","roof_shape","source_enum"),
             ("building" if osm else "class","use","source_enum"),
-            ("building:material" if osm else "facade_material","wall_material","source_enum")):
+            ("building:material" if osm else "facade_material","building_material" if osm else "facade_material","source_enum")):
         if key in p:
             raw=p[key]
             value=raw.strip() if isinstance(raw,str) and raw.strip().lower() not in ("","unknown","yes","no") else None
