@@ -62,6 +62,11 @@ jobs:
         run: |
           g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o /tmp/pcg_zero_tile_abi
           python lab/compile_zero_tiles.py --self-test --decoder /tmp/pcg_zero_tile_abi
+      - name: Approved synthetic GIS pilot zero-opening ABI bridge
+        env:
+          PYTHONPATH: src
+        run: |
+          python lab/pack_approved_pilot_zero_tiles.py --decoder /tmp/pcg_zero_tile_abi
       - name: Software GLSL facade shader reference
         env:
           PYTHONPATH: src
