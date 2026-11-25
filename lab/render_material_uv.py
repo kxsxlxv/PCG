@@ -64,6 +64,7 @@ def main():
         # Same original triangles, grouped by a bounded emissive variant only.
         assert sum(len(g) for g in night_groups.values())==len(tris)
         assert set(night_groups)<=set(groups)|{"glass_proxy__warm","glass_proxy__neutral"}
+        day_depth={}
         for night,active_groups,output,contact in ((False,groups,out,sheet),(True,night_groups,night_out,night_sheet)):
             scene=trimesh.Scene()
             for key,tri in sorted(active_groups.items()):
@@ -97,6 +98,7 @@ def main():
                 assert m.visual.material.normalTexture is not None
                 assert m.visual.material.metallicRoughnessTexture is not None
                 m.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2,[1,0,0]))
+                np.testing.assert_allclose(m.vertices,np.array(active_groups[key]).reshape(-1,3),atol=2e-6)
                 expected=np.concatenate([metric_uv(t,MATERIALS[base].repeat_m)[0] for t in active_groups[key]])
                 np.testing.assert_allclose(m.visual.uv,expected,atol=2e-6)
             for col,(label,view,up) in enumerate(VIEWS):
@@ -108,8 +110,13 @@ def main():
                     canvas[mask]=np.asarray(im)[mask]
                     depth[mask]=z[mask]
                 assert np.isfinite(depth).sum()>100
+                if night:
+                    np.testing.assert_array_equal(np.isfinite(depth),np.isfinite(day_depth[label]))
+                    np.testing.assert_allclose(depth[np.isfinite(depth)],day_depth[label][np.isfinite(depth)],atol=2e-6)
+                else:
+                    day_depth[label]=depth.copy()
                 im=Image.fromarray(canvas)
-                ImageDraw.Draw(im).text((8,8),profile+" / "+label,fill=(0,0,0))
+                ImageDraw.Draw(im).text((8,8),profile+" / "+label,fill=(220,225,235) if night else (0,0,0))
                 im.save(output/(profile+"_"+label+".png"));contact.paste(im,(col*SIZE,row*SIZE))
             if not night:
                 day_bytes=path.stat().st_size
