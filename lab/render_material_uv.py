@@ -20,6 +20,46 @@ def image(a):
     return Image.fromarray(np.round(a*255).astype(np.uint8))
 
 
+def export_reload(active_groups,maps,path,*,night):
+    """Shared Lab GLB export and round-trip checks; canonical Z-up returned."""
+    scene=trimesh.Scene()
+    for key,tri in sorted(active_groups.items()):
+        base,_,variant=key.partition('__')
+        r=MATERIALS[base];m=maps[base]
+        v=np.array(tri).reshape(-1,3)
+        uv=np.concatenate([metric_uv(t,r.repeat_m)[0] for t in tri])
+        normals=np.repeat(np.array([metric_uv(t,r.repeat_m)[1] for t in tri]),3,axis=0)
+        mat=trimesh.visual.material.PBRMaterial(name=key,baseColorTexture=m["basecolor"],
+            normalTexture=m["normal"],metallicRoughnessTexture=m["orm"],occlusionTexture=m["orm"],
+            metallicFactor=1.,roughnessFactor=1.,
+            emissiveFactor=EMISSION[variant or 'off'] if night else None)
+        mesh=trimesh.Trimesh(vertices=v,faces=np.arange(len(v)).reshape(-1,3),
+             vertex_normals=normals,process=False,
+             visual=trimesh.visual.texture.TextureVisuals(uv=uv,material=mat))
+        mesh.apply_transform(trimesh.transformations.rotation_matrix(-np.pi/2,[1,0,0]))
+        scene.add_geometry(mesh,geom_name=key,node_name=key)
+    path.write_bytes(scene.export(file_type="glb"))
+    loaded=trimesh.load(path,force="scene",process=False)
+    meshes=list(loaded.geometry.values())
+    assert len(meshes)==len(active_groups)
+    assert sum(len(m.faces) for m in meshes)==sum(map(len,active_groups.values()))
+    for m in meshes:
+        key=m.visual.material.name
+        assert key in active_groups
+        base,_,variant=key.partition('__')
+        if night:
+            np.testing.assert_allclose(m.visual.material.emissiveFactor if m.visual.material.emissiveFactor is not None else (0,0,0),EMISSION[variant or 'off'],atol=1e-6)
+        assert np.isfinite(m.visual.uv).all()
+        np.testing.assert_array_equal(np.asarray(m.visual.material.baseColorTexture.convert("RGB")),np.asarray(maps[base]["basecolor"]))
+        assert m.visual.material.normalTexture is not None
+        assert m.visual.material.metallicRoughnessTexture is not None
+        m.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2,[1,0,0]))
+        np.testing.assert_allclose(m.vertices,np.array(active_groups[key]).reshape(-1,3),atol=2e-6)
+        expected=np.concatenate([metric_uv(t,MATERIALS[base].repeat_m)[0] for t in active_groups[key]])
+        np.testing.assert_allclose(m.visual.uv,expected,atol=2e-6)
+    return meshes
+
+
 def main():
     out=Path("artifacts/l4-material-uv");out.mkdir(parents=True,exist_ok=True)
     maps={};manifest={}
@@ -66,41 +106,8 @@ def main():
         assert set(night_groups)<=set(groups)|{"glass_proxy__warm","glass_proxy__neutral"}
         day_depth={}
         for night,active_groups,output,contact in ((False,groups,out,sheet),(True,night_groups,night_out,night_sheet)):
-            scene=trimesh.Scene()
-            for key,tri in sorted(active_groups.items()):
-                base,_,variant=key.partition('__')
-                r=MATERIALS[base];m=maps[base]
-                v=np.array(tri).reshape(-1,3)
-                uv=np.concatenate([metric_uv(t,r.repeat_m)[0] for t in tri])
-                normals=np.repeat(np.array([metric_uv(t,r.repeat_m)[1] for t in tri]),3,axis=0)
-                mat=trimesh.visual.material.PBRMaterial(name=key,baseColorTexture=m["basecolor"],
-                    normalTexture=m["normal"],metallicRoughnessTexture=m["orm"],occlusionTexture=m["orm"],
-                    metallicFactor=1.,roughnessFactor=1.,
-                    emissiveFactor=EMISSION[variant or 'off'] if night else None)
-                mesh=trimesh.Trimesh(vertices=v,faces=np.arange(len(v)).reshape(-1,3),
-                     vertex_normals=normals,process=False,
-                     visual=trimesh.visual.texture.TextureVisuals(uv=uv,material=mat))
-                mesh.apply_transform(trimesh.transformations.rotation_matrix(-np.pi/2,[1,0,0]))
-                scene.add_geometry(mesh,geom_name=key,node_name=key)
-            path=output/(profile+".glb");path.write_bytes(scene.export(file_type="glb"))
-            loaded=trimesh.load(path,force="scene",process=False)
-            meshes=list(loaded.geometry.values())
-            assert len(meshes)==len(active_groups)
-            assert sum(len(m.faces) for m in meshes)==len(tris)
-            for m in meshes:
-                key=m.visual.material.name
-                assert key in active_groups
-                base,_,variant=key.partition('__')
-                if night:
-                    np.testing.assert_allclose(m.visual.material.emissiveFactor if m.visual.material.emissiveFactor is not None else (0,0,0),EMISSION[variant or 'off'],atol=1e-6)
-                assert np.isfinite(m.visual.uv).all()
-                np.testing.assert_array_equal(np.asarray(m.visual.material.baseColorTexture.convert("RGB")),np.asarray(maps[base]["basecolor"]))
-                assert m.visual.material.normalTexture is not None
-                assert m.visual.material.metallicRoughnessTexture is not None
-                m.apply_transform(trimesh.transformations.rotation_matrix(np.pi/2,[1,0,0]))
-                np.testing.assert_allclose(m.vertices,np.array(active_groups[key]).reshape(-1,3),atol=2e-6)
-                expected=np.concatenate([metric_uv(t,MATERIALS[base].repeat_m)[0] for t in active_groups[key]])
-                np.testing.assert_allclose(m.visual.uv,expected,atol=2e-6)
+            path=output/(profile+".glb")
+            meshes=export_reload(active_groups,maps,path,night=night)
             for col,(label,view,up) in enumerate(VIEWS):
                 depth=np.full((SIZE,SIZE),-np.inf)
                 canvas=np.full((SIZE,SIZE,3),[13,19,29] if night else [245,243,238],dtype=np.uint8)
