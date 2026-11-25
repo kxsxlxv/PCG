@@ -104,7 +104,7 @@ def asset_triangles(recipe,lod):
 def plan_assets(f:Footprint,plan:ArchitecturePlan):
     if f.digest()!=plan.footprint_digest:
         raise ValueError("footprint mismatch")
-    recipes={}; placements=[]; rejected=[]
+    recipes={}; placements=[]; rejected=list(plan.balcony_fallbacks)
     def add(s,o,recipe,origin):
         recipes[recipe.id]=recipe
         tangent=((s.end[0]-s.start[0])/s.length,(s.end[1]-s.start[1])/s.length)
