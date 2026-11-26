@@ -239,3 +239,5 @@ def run(cases,groups,table,cells,scene,actual,maps,base,visible,two,decoder):
     files=[path,OUT/"roof_balcony_cutout.glb",OUT/"facade_params.bin",OUT/"facade_cells.bin",OUT/"placements.json",OUT/"parameters.json",OUT/"clearance.json",OUT/"drains.json"]
     dump(OUT/"bundle.json",dict(schema=report["schema"],hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}))
     print("FACADE_TRIM_REPORT "+json.dumps(report),flush=True)
+    import zero_roof_detail as roofs
+    roofs.run(cases,g,t,cells,candidate,actual,maps,near,visible,two,decoder)
