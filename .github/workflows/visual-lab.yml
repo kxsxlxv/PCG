@@ -10,7 +10,7 @@ concurrency:
 jobs:
   probes:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       MPLBACKEND: Agg
       PYTHONHASHSEED: "0"

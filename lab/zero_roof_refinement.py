@@ -192,3 +192,5 @@ def run(groups,table,cells,scene,actual,maps,base,previous,info,frames,visible,t
     files=[path,p,OUT/"antenna_atlas.png",OUT/"roof_balcony_cutout.glb",OUT/"facade_params.bin",OUT/"facade_cells.bin",OUT/"parameters.json",OUT/"placements.json"]
     trim.dump(OUT/"bundle.json",dict(schema=report["schema"],hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}))
     print("ROOF_REFINEMENT_REPORT "+json.dumps(report),flush=True)
+    import zero_window_entrance_stage as stage
+    stage.run(g,table,cells,result,actual,(vv,uu,ff,rgba),maps,shade,info,frames,vis,both,decoder)
