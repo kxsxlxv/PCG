@@ -104,6 +104,44 @@ def overlaps(a,b):
     A=combined.bounds(a);B=combined.bounds(b)
     return np.all(np.minimum(A[1],B[1])-np.maximum(A[0],B[0])>1e-8)
 
+def fit_drains_to_cornice(c,fac):
+    """Resolve a real clash by ending the vertical downspout at the
+    underside of the new cornice. Keep the same placement and base.
+    This is an attachment fit, not a collision whitelist.
+    """
+    limit=c["eave_m"]-.18
+    result=[]
+    for m in fac:
+        if m["kind"]!="drain" or combined.bounds(m)[1,2]<=limit:
+            result.append(m);continue
+        q=copy.deepcopy(m)
+        lo,hi=combined.bounds(m)
+        assert lo[2]<limit<hi[2]
+        for _,_,t in q["geometry"]:
+            t[:,:,2]=lo[2]+(t[:,:,2]-lo[2])*(limit-lo[2])/(hi[2]-lo[2])
+            mesh=trimesh.Trimesh(vertices=t.reshape(-1,3),faces=np.arange(t.size//3).reshape(-1,3),process=True)
+            assert mesh.is_watertight and mesh.is_winding_consistent and mesh.volume>0
+        new=combined.bounds(q)
+        np.testing.assert_allclose(new[0],lo,atol=1e-9,rtol=0)
+        np.testing.assert_allclose(new[1,:2],hi[:2],atol=1e-9,rtol=0)
+        assert abs(new[1,2]-limit)<1e-9
+        q["bounds"]=new.tolist()
+        q["fit_adjustment"]={"reason":"cornice_underside_attachment","original_top_m":float(hi[2]),"new_top_m":float(new[1,2])}
+        result.append(q)
+    return result
+
+def test_drain_cornice_regression():
+    # Exact failed brick_stack placement from CI artifact 15102650906.
+    c={"eave_m":15.}
+    m={"id":"facade:brick_stack:facade:0:0:drain","kind":"drain",
+       "geometry":[("drain","painted_rail",bm(.28,-.065,.10,.13,14.8,.10))]}
+    corn={"geometry":[("cornice","painted_trim",bm(15.,-.12,30.64,.40,.18,14.82))]}
+    assert overlaps(m,corn)
+    q=fit_drains_to_cornice(c,[m])[0]
+    assert q["id"]==m["id"] and not overlaps(q,corn)
+    assert abs(combined.bounds(q)[1,2]-14.82)<1e-9
+    assert abs(combined.bounds(m)[1,2]-14.9)<1e-9
+
 def roof_details(c,old,fac,spacing):
     f=Footprint(c["building_id"],c["outer"],c["holes"])
     mass=build_massing(f,c["eave_m"],c["roof"],c["rise"])
@@ -135,7 +173,8 @@ def roof_details(c,old,fac,spacing):
                      bm(w+.12,d/2,.40,d-.16,.18,h-.18)])
     for p in corn:
         q=mod(c,"test","cornice",[("cornice","painted_trim",p)])
-        assert not any(overlaps(q,b) for b in fac)
+        clashes=[b["id"] for b in fac if overlaps(q,b)]
+        assert not clashes,(c["id"],"cornice clash",clashes)
     added.append(mod(c,"cornice","cornice",[("cornice","painted_trim",p) for p in corn]))
     # Real open metal railing, rectangular cross-sections. No alpha-test
     # or billboard. Near/far support count changes, not the rail silhouette.
@@ -228,6 +267,7 @@ def shader(old,cells,styles,joints,enhanced,details=False):
 
 def main(decoder):
     test_joint_regression()
+    test_drain_cornice_regression()
     OUT.mkdir(parents=True,exist_ok=True);cases=arch.fixtures()
     styles={c["building_id"]:c["id"] for c in cases}
     oldplan=tile.plan_facades
@@ -264,7 +304,9 @@ def main(decoder):
             for c in cases:
                 fac,rm=plans[c["id"]]
                 if col<2:mods=fac+[combined.roof_module(m) for m in rm]
-                else:mods=fac+roof_details(c,rm,fac,2.4 if col==2 else 1.2)
+                else:
+                    fitted=fit_drains_to_cornice(c,fac)
+                    mods=fitted+roof_details(c,rm,fitted,2.4 if col==2 else 1.2)
                 for m in mods:
                     combined.append_compact(groups,table,c,m)
                     placements.append({k:v for k,v in m.items() if k!="geometry"})
@@ -300,6 +342,7 @@ def main(decoder):
             reports.append(dict(lane=lane,triangles=len(v)//3,records=len(table),glb_bytes=path.stat().st_size,
                 balcony_anchors=len(anchors),opening_triangles_added=0,abi_samples=samples,cpp_abi=True,
                 modules=dict(Counter(m["kind"] for m in placements)),
+                drain_fit_adjustments=[m["fit_adjustment"] for m in placements if "fit_adjustment" in m],
                 guard_posts=sum(m.get("posts",0) for m in placements),
                 guard_rails=sum(m.get("rail_segments",0) for m in placements),
                 cells_sha256=hashlib.sha256(cells.tobytes()).hexdigest()))
@@ -309,6 +352,7 @@ def main(decoder):
         assert reports[2]["modules"].get("roof_guard")==3
         assert reports[3]["guard_posts"]>reports[2]["guard_posts"]>0
         assert reports[3]["triangles"]>reports[2]["triangles"]
+        assert len(reports[2]["drain_fit_adjustments"])==len(reports[3]["drain_fit_adjustments"])==1
     finally:ref.shader=old
     sheet.save(OUT/"contact.png")
     report=dict(schema="pcg.research.architecture-correctness.v1",lanes=reports,
