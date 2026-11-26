@@ -18,6 +18,7 @@ import zero_balcony_guard_variants as variants
 import zero_alpha_cutout as cut
 import zero_loggia_repair as repair
 import zero_integrated_cutouts as integrated
+import zero_window_visual as windows
 
 OUT=Path("artifacts/zero-external-balconies")
 PREV=Path("artifacts/zero-integrated-cutouts")
@@ -187,6 +188,7 @@ def main(decoder):
                 np.testing.assert_array_equal(a,b)
         im,_=ref.render(*scene,maps,"night",center_override=cam[0],ppm_override=cam[1],view_override=cam[2],visibility=visible,two_sided=two)
         im.save(OUT/"night_external.png")
+        windows.compare(scene,maps,cells,shade,visible,two)
     finally:ref.shader=original
     sheet.save(OUT/"comparison.png")
     report=dict(schema="pcg.research.external-balconies.v1",previous_triangles=baseline["candidate_triangles"],

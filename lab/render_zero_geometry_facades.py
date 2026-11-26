@@ -100,8 +100,10 @@ def shader(uv,r,maps,mode,dense=False):
         emission[lit&(hh%4==0)]=np.array([.66,.69,.57])
     return color,emission
 
-def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None,visibility=None,lighting=None,capture_ids=None,two_sided=None):
-    size=640
+def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None,visibility=None,lighting=None,capture_ids=None,two_sided=None,resolution=(640,640)):
+    width,height=map(int,resolution)
+    if width<=0 or height<=0:raise ValueError("invalid resolution")
+    if capture_ids is not None and capture_ids.shape!=(height,width):raise ValueError("capture_ids size mismatch")
     view=np.array([1.,-1.5,.85] if view_override is None else view_override,dtype=float);view/=np.linalg.norm(view)
     right=np.cross([0,0,1],view);right/=np.linalg.norm(right)
     up=np.cross(view,right)
@@ -110,10 +112,10 @@ def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None
     if center_override is not None:center=np.asarray(center_override,dtype=float)
     if ppm_override is not None:ppm=float(ppm_override)
     pts=v-center
-    xy=np.column_stack((pts@right,-pts@up))*ppm+size/2
+    xy=np.column_stack((pts@right,-pts@up))*(ppm*height/640.)+np.array([width,height])/2
     z=pts@view
-    img=np.full((size,size,3),[15,22,32] if mode=="night" else [224,229,231],dtype=np.uint8)
-    depth=np.full((size,size),-np.inf)
+    img=np.full((height,width,3),[15,22,32] if mode=="night" else [224,229,231],dtype=np.uint8)
+    depth=np.full((height,width),-np.inf)
     light=np.array([.4,-.6,.7]);light/=np.linalg.norm(light)
     for k in range(0,len(v),3):
         if close and table[int(ids[k])]["building"]!="fixture:0":continue
@@ -124,7 +126,7 @@ def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None
             n=-n
         a,b,c=xy[k:k+3]
         lo=np.maximum(np.floor(np.min([a,b,c],axis=0)).astype(int),0)
-        hi=np.minimum(np.ceil(np.max([a,b,c],axis=0)).astype(int)+1,size)
+        hi=np.minimum(np.ceil(np.max([a,b,c],axis=0)).astype(int)+1,[width,height])
         x0,y0=lo;x1,y1=hi
         if x0>=x1 or y0>=y1:continue
         yy,xx=np.mgrid[y0:y1,x0:x1];xx=xx+.5;yy=yy+.5
