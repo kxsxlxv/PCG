@@ -189,3 +189,5 @@ def run(cases,groups,table,cells,scene,actual,maps,base,visible,two,decoder):
     files=[path,OUT/"roof_balcony_cutout.glb",OUT/"facade_cells.bin",OUT/"facade_params.bin",OUT/"placements.json",OUT/"parameters.json",OUT/"roof_layout.json"]
     trim.dump(OUT/"bundle.json",dict(schema=report["schema"],hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}))
     print("ROOF_DETAIL_REPORT "+json.dumps(report),flush=True)
+    import zero_roof_refinement as refine
+    refine.run(g,t,cells,candidate,actual,maps,base,near,info,frames,visible,two,decoder)
