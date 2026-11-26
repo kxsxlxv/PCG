@@ -88,6 +88,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/zero_facade_architecture.py /tmp/pcg_zero_tile_abi
+      - name: Combined roof facade full anchor LOD and compact records
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_combined_lod.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
