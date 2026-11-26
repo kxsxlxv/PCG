@@ -108,6 +108,12 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/zero_recessed_loggias.py /tmp/pcg_zero_tile_abi
+      - name: Shared alpha cutout strips GLB and software EGL depth filtering
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_alpha_cutout.py
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
