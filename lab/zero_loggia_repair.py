@@ -88,7 +88,7 @@ def new_recess(groups,table,c,q):
         result.append(new)
     return reveal,result,strips,records
 
-def geometry(decoder):
+def geometry(decoder,module_transform=None):
     cases=arch.fixtures();styles={c["building_id"]:c["id"] for c in cases}
     op=tile.plan_facades
     try:
@@ -123,6 +123,7 @@ def geometry(decoder):
                 reveal,loggias,rail,records=new_recess(groups,table,c,q)
                 mods += [reveal]+loggias;strips.extend(rail);guards.extend(records)
                 qs_all.append((c,q))
+        if module_transform is not None:mods=module_transform(c,mods)
         for m in mods:
             combined.append_compact(groups,table,c,m)
             placements.append({k:v for k,v in m.items() if k!="geometry"})
