@@ -3,10 +3,12 @@ from pathlib import Path
 import json
 import resource
 import time
-from compile_zero_tiles import fixture,build_dataset,dump
+from compile_zero_tiles import fixture,build_dataset,dump,regression_float32_boundary
 from verify_zero_bundle import verify
 
 def main():
+    regression=regression_float32_boundary()
+    print("ZERO_ABI_BOUNDARY_REGRESSION "+json.dumps(regression),flush=True)
     root=Path("artifacts").resolve()
     library=root/"zero-multitile/library/manifest.json"
     decoder=Path("/tmp/pcg_zero_tile_abi")
@@ -49,7 +51,7 @@ def main():
         except (ValueError,FileNotFoundError):pass
         else:raise AssertionError("external path accepted")
     finally:bad.unlink()
-    summary={"actual_export":result,"compile_and_audit_seconds":seconds,
+    summary={"float32_boundary_regression":regression,"actual_export":result,"compile_and_audit_seconds":seconds,
              "process_peak_rss_kib":resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
              "independent_verified_packages":checked,"rejected_corrupt_payload":True,"rejected_external_path":True,
              "limitations":["synthetic CPU export, not runtime loading or hardware GPU benchmark",

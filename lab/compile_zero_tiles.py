@@ -91,7 +91,109 @@ def validate(data):
             "party_edges":edges,"offset":local,"source_ref":b["source_ref"]}))
     return np.asarray(origin,dtype=np.float64),size,sorted(out,key=lambda p:p[1]["id"])
 
-def pack_table(table,cells,path):
+# Cross-precision comparison is a geometric contract, not a fuzzy role test.
+# Reject any record whose corresponding opening boundary moves by >0.1 mm.
+# This budget is for the SDK-free FP64 -> FP32 parameter conversion only.
+MAX_ABI_EDGE_DRIFT_M=1e-4
+
+def opening_rectangles(r,cells):
+    """Independent explicit rectangles indexed by stable facade-local slot."""
+    n=r["floors"]*r["bays"];a=r["cell_start"]
+    assert 0<=a<=a+n<=len(cells)
+    rect={}
+    for j in np.flatnonzero(cells[a:a+n]):
+        j=int(j);code=int(cells[a+j]);kind=code&3
+        assert kind in (1,2) and code>>2<3
+        floor,bay=divmod(j,r["bays"])
+        center=r["first_center"]+bay*r["spacing"]
+        bottom=floor*r["floor_h"]+(r["balcony_threshold"] if kind==2 else r["sill"])
+        height=r["door_height"] if kind==2 else r["window_height"]
+        width=r["window_width"]
+        rect[j]=(code,(center-width/2,bottom,center+width/2,bottom+height))
+    if r["door"] is not None:
+        x,y,w,h=r["door"];rect[n]=(3,(x,y,x+w,y+h))
+    return rect
+
+def rectangle_oracle(sample,rect):
+    """Explicit rectangle membership, independent of grid index arithmetic."""
+    slot=np.full(len(sample),-1,dtype=np.int64)
+    role=np.zeros(len(sample),np.uint8);var=np.zeros_like(role)
+    local=np.zeros((len(sample),2),np.float64)
+    u,z=sample.T
+    for j,(code,(x0,y0,x1,y1)) in rect.items():
+        assert x1>x0 and y1>y0
+        m=(u>=x0)&(u<x1)&(z>=y0)&(z<y1)
+        assert np.all(slot[m]==-1),"overlapping explicit opening rectangles"
+        slot[m]=j;role[m]=code&3;var[m]=code>>2
+        local[m]=np.column_stack(((u[m]-x0)/(x1-x0),(z[m]-y0)/(y1-y0)))
+    return slot,role,var,local
+
+def new_float32_audit():
+    return {"boundary_samples":0,"max_edge_drift_m":0.,"edge_budget_m":MAX_ABI_EDGE_DRIFT_M,
+            "boundary_examples":[]}
+
+def audit_float32_lookup(sample,r,q,cells,audit):
+    a=opening_rectangles(r,cells);b=opening_rectangles(q,cells)
+    assert a.keys()==b.keys(),"opening identity changed during ABI conversion"
+    drift=0.
+    for j,(code,box) in a.items():
+        other,box32=b[j]
+        assert code==other,"opening role/emission changed during ABI conversion"
+        drift=max(drift,max(abs(x-y) for x,y in zip(box,box32)))
+    assert drift<=MAX_ABI_EDGE_DRIFT_M,(r["facade_id"],"ABI opening edge drift",drift)
+    audit["max_edge_drift_m"]=max(audit["max_edge_drift_m"],drift)
+    ai,er,ev,el=rectangle_oracle(sample,a)
+    bi,fr,fv,fl=rectangle_oracle(sample,b)
+    ar,av,al=tile.lookup(sample,r,cells);br,bv,bl=tile.lookup(sample,q,cells)
+    # No ambiguous pixels are discarded from either exact classification test.
+    np.testing.assert_array_equal(ar,er);np.testing.assert_array_equal(av,ev)
+    np.testing.assert_array_equal(br,fr);np.testing.assert_array_equal(bv,fv)
+    np.testing.assert_allclose(al,el,atol=1e-10,rtol=0)
+    np.testing.assert_allclose(bl,fl,atol=1e-10,rtol=0)
+    same=ai==bi
+    np.testing.assert_array_equal(ar[same],br[same])
+    np.testing.assert_array_equal(av[same],bv[same])
+    np.testing.assert_allclose(al[same],bl[same],atol=1e-5)
+    # A point can cross only the displaced edge of its corresponding opening.
+    # A switch between two opening identities is never accepted.
+    for k in np.flatnonzero(~same):
+        k=int(k);assert (ai[k]<0)!=(bi[k]<0),"opening identity swap"
+        j=int(max(ai[k],bi[k]));u,z=sample[k]
+        def inside(box):
+            x0,y0,x1,y1=box
+            return x0<=u<x1 and y0<=z<y1
+        assert inside(a[j][1]) != inside(b[j][1]),"not in exact boundary symmetric difference"
+        assert (ar[k]!=br[k]) or (av[k]!=bv[k])
+        audit["boundary_samples"]+=1
+        if len(audit["boundary_examples"])<16:
+            audit["boundary_examples"].append({"facade":r["facade_id"],"sample_index":k,
+                "uv_m":sample[k].tolist(),"slot":j,"canonical_role":int(ar[k]),
+                "decoded_role":int(br[k]),"canonical_rect_m":list(a[j][1]),
+                "decoded_rect_m":list(b[j][1])})
+
+def regression_float32_boundary():
+    """Minimized version of the failed stress seed, not a relaxed random test."""
+    fid="stress:00880:facade:0:0"
+    r={"facade_id":fid,"floors":2,"bays":4,"cell_start":0,"door":None,
+       "length":12.,"height":6.,"floor_h":3.,"first_center":1.8000000000000005,
+       "spacing":2.8,"window_width":1.4,"window_height":1.5,"sill":.85,
+       "door_height":2.2,"balcony_threshold":.05+.12}
+    q=dict(r);q.update({k:float(np.float32(r[k])) for k in F_FIELDS[:10]})
+    cells=np.zeros(8,np.uint8);cells[6]=2|(1<<2)
+    point=np.random.default_rng(seed64(fid)[0]^0xc1c5).random((1024,2))[216]*[12.,6.]
+    sample=np.array([point,point+[-1e-5,0],point+[1e-5,0]])
+    np.testing.assert_array_equal(tile.lookup(sample,r,cells)[0],[2,2,0])
+    np.testing.assert_array_equal(tile.lookup(sample,q,cells)[0],[0,2,0])
+    audit=new_float32_audit();audit_float32_lookup(sample,r,q,cells,audit)
+    assert audit["boundary_samples"]==1
+    try:
+        audit_float32_lookup(sample,r,dict(q,first_center=q["first_center"]+.01),cells,new_float32_audit())
+    except AssertionError:pass
+    else:raise AssertionError("out-of-budget edge displacement was accepted")
+    return audit
+
+def pack_table(table,cells,path,audit=None):
+    if audit is None:audit=new_float32_audit()
     if not 1<=len(table)<=65536:raise ValueError("surface record limit; split spatial tile")
     buf=bytearray(HEADER.pack(MAGIC,1,len(table),RECORD.size))
     for i,r in enumerate(table):
@@ -129,9 +231,7 @@ def pack_table(table,cells,path):
         seen[a:a+n]+=1
         rng=np.random.default_rng(r["seed"]^0xc1c5)
         sample=rng.random((1024,2))*[r["length"],r["height"]]
-        ar,av,al=tile.lookup(sample,r,cells);br,bv,bl=tile.lookup(sample,q,cells)
-        np.testing.assert_array_equal(ar,br);np.testing.assert_array_equal(av,bv)
-        np.testing.assert_allclose(al,bl,atol=1e-5)
+        audit_float32_lookup(sample,r,q,cells,audit)
         checked+=len(sample)
     assert np.all(seen==1)
     return checked
@@ -160,6 +260,7 @@ def build_dataset(data,root,library,decoder=None,audit_samples=1024,preview=Fals
     buckets=defaultdict(list)
     for owner,c in items:buckets[owner].append(c)
     seen=set();world_geometry={};semantic={};manifests=[];decoded_samples=0;cpp=0;largest=None
+    precision_audit=new_float32_audit()
     source={c["id"]:c["source_ref"] for _,c in items}
     for owner,cases in sorted(buckets.items()):
         key=f"{owner[0]}_{owner[1]}";out=root/key;out.mkdir(exist_ok=True)
@@ -170,7 +271,7 @@ def build_dataset(data,root,library,decoder=None,audit_samples=1024,preview=Fals
         v,uv,ids,roles=tile.read_glb(mesh,groups,table)
         (out/"facade_cells.bin").write_bytes(cells.tobytes())
         dump(out/"parameters.json",table)
-        decoded_samples+=pack_table(table,cells,out/"facade_params.bin")
+        decoded_samples+=pack_table(table,cells,out/"facade_params.bin",precision_audit)
         if decoder:
             run=subprocess.run([str(decoder),str(out/"facade_params.bin"),str(out/"facade_cells.bin"),str(len(LAYERS))],capture_output=True,text=True,check=True)
             result=json.loads(run.stdout)
@@ -205,6 +306,7 @@ def build_dataset(data,root,library,decoder=None,audit_samples=1024,preview=Fals
         "records":sum(m["records"] for m in manifests),"cell_bytes":sum(m["cells"] for m in manifests),
         "glb_bytes":sum(m["glb_bytes"] for m in manifests),"parameter_bytes":sum(m["param_bytes"] for m in manifests),
         "cpp_abi_tiles":cpp,"float32_lookup_samples":decoded_samples,"opening_triangles_added":0,
+        "float32_boundary_audit":precision_audit,
         "max_records_per_tile":max(m["records"] for m in manifests),"unique_image_textures_per_building":0}
     index={"schema":"pcg.research.zero-tiles.output.v1","input_sha256":hashlib.sha256(canonical(normalized)).hexdigest(),
         "world_frame":data["world_frame"],"tile_size_m":size,"library":os.path.relpath(library,root),
