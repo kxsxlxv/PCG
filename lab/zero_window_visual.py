@@ -15,6 +15,11 @@ import zero_loggia_repair as repair
 OUT=Path("artifacts/zero-window-visual")
 FRAMES=np.array([[.80,.78,.73],[.84,.85,.82],[.68,.64,.56],[.46,.32,.23]])
 
+def is_host_wall(record):
+    # Integrated alpha-cutout records intentionally omit role, seed and span.
+    # Accessories are not canonical facade records.
+    return "accessory" not in record and record.get("role")=="wall"
+
 def candidate(base,cells):
     def shade(s,r,maps,mode,dense=False):
         col,em=base(s,r,maps,mode,dense)
@@ -46,7 +51,7 @@ def candidate(base,cells):
                 col[panel]=srgb_decode(palette[(key//11)%len(palette)])
                 col[panel&(np.mod(x*w/.14,1)<.10)]*=.78
             return col,em
-        if r["role"]!="wall" or "accessory" in r or mode=="bare":return col,em
+        if not is_host_wall(r) or mode=="bare":return col,em
         role,var,local=tile.lookup(s,r,cells)
         opening=(role==1)|(role==2)
         if not opening.any():return col,em
@@ -98,8 +103,19 @@ def compare(scene,maps,cells,base,visible,two):
         # Direct regression for every wall: outside canonical apertures
         # unchanged, deterministic shading, valid colors.
         checked=0
+        cutouts_checked=0
         for r in scene[3]:
-            if r["role"]!="wall" or "accessory" in r:continue
+            # Exercise the actual sparse records appended by append_layer,
+            # through both shaders, including nonempty day/night samples.
+            if r.get("accessory","").startswith("cutout_"):
+                assert not is_host_wall(r)
+                s=np.array([[.15,.25],[.5,.75],[1.,1.]])
+                for mode in ("day","night"):
+                    for a,b in zip(base(s,r,maps,mode),improved(s,r,maps,mode)):
+                        np.testing.assert_array_equal(a,b)
+                cutouts_checked+=1
+                continue
+            if not is_host_wall(r):continue
             s=np.random.default_rng(r["seed"]).random((4096,2))*[r["length"],r["height"]]
             role,_,_=tile.lookup(s,r,cells);other=(role!=1)&(role!=2)
             for mode in ("day","night"):
@@ -109,6 +125,7 @@ def compare(scene,maps,cells,base,visible,two):
                     np.testing.assert_array_equal(b,c)
                     assert np.isfinite(b).all() and (b>=0).all()
             checked+=len(s)
+        assert checked>0 and cutouts_checked==2
         for i,(name,center,ppm,view,mode,resolution) in enumerate(views):
             ref.shader=base
             # Same stage 20 shadow map for both lanes. Shadow-map res is
@@ -135,7 +152,7 @@ def compare(scene,maps,cells,base,visible,two):
     finally:ref.shader=original
     sheet.save(OUT/"comparison.png")
     report=dict(schema="pcg.research.window-visual.v1",views=rows,wall_samples_checked=checked,
-        opening_triangles_added=0,scene_triangles=len(scene[0])//3,canonical_apertures_unchanged=True,
+        cutout_records_checked=cutouts_checked,opening_triangles_added=0,scene_triangles=len(scene[0])//3,canonical_apertures_unchanged=True,
         limitations=["CPU color and emission only; no native UNIGINE or actual transparency.",
         "Paired balcony door and window envelope not implemented yet.",
         "Shadow-map resolution remains 640; no AA or mip filter validation in this pass.",
