@@ -46,5 +46,38 @@
       "bytes": 256578
     }
   ],
-  "runtime_integrated": false
+  "runtime_integrated": false,
+  "reference_sources": [
+    {
+      "folder": "jiwindowbox",
+      "repo": "ADN-DevTech/3dsMax-OSL-Shaders",
+      "commit": "4697d212a02e0732764793cb3cec581a321b33a7",
+      "license": "Apache-2.0",
+      "role": "OSL algorithm reference only; not a UNIGINE runtime shader",
+      "files": [
+        {
+          "path": "jiwindowbox/jiWindowBox.osl",
+          "git_blob_sha1": "4932ae006308b0fffd310288a1eda98b30cd5506"
+        },
+        {
+          "path": "jiwindowbox/LICENSE.txt",
+          "git_blob_sha1": "0c8a80022eaad1406ec334ff3017890b48f80120"
+        }
+      ]
+    }
+  ],
+  "pending_sources": [
+    {
+      "name": "PanelkaPack",
+      "url": "https://kureca.itch.io/panelka-pack",
+      "license": "CC0",
+      "status": "archive not acquired; no direct binary download available in current environment"
+    },
+    {
+      "name": "wParallax",
+      "url": "https://wparallax.com/",
+      "license_url": "https://license-agreement.wparallax.com/",
+      "status": "EXR maps excluded from redistributable repository; user-supplied licensed local evaluation only"
+    }
+  ]
 }
