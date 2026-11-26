@@ -174,7 +174,7 @@ def append(groups,table,c,m):
                               seed=ref.seed(sid),height=c["eave_m"],floors=c["floors"],
                               accessory=kind,span=span.tolist(),placement=m["id"]))
 
-def render_shader(old,cells,styles,zoned):
+def render_shader(old,cells,styles,zoned,joint_masks=None):
     def shade(sample,r,maps,mode,dense=False):
         col,em=old(sample,r,maps,"bare",False)
         u,z=sample.T
@@ -207,6 +207,7 @@ def render_shader(old,cells,styles,zoned):
             n=(np.sin(u*2.6+z*.47)+np.sin(u*.73-z*3.1))*.5
             if style=="panel_block":
                 joints=(np.minimum(z%h,h-z%h)<.045)|(np.minimum(u%2.8,2.8-u%2.8)<.035)
+                if joint_masks is not None:joints=joint_masks(r,sample)
                 col[wall]*=(.94+.055*np.sin(floor[wall]*2.3+bay[wall]*1.7))[:,None]
                 col[wall&joints]*=(.55+.20*n[wall&joints])[:,None]
             if style=="mixed_use":

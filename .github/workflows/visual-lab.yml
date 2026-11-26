@@ -92,6 +92,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/zero_combined_lod.py /tmp/pcg_zero_tile_abi
+      - name: Opening-aware panel seams and architectural roof edge details
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_architecture_correctness.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
