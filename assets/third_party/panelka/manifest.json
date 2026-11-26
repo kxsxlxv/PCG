@@ -1,0 +1,330 @@
+{
+  "source": "PanelkaPack by Kureca",
+  "source_url": "https://kureca.itch.io/panelka-pack",
+  "license": "CC0 as declared on source page",
+  "maps": [
+    {
+      "file": "Panel1.png",
+      "source": "Panelka/Panels/Panel1.png",
+      "source_size": [
+        512,
+        527
+      ],
+      "output_size": [
+        512,
+        527
+      ],
+      "source_sha256": "a906888bfcd5f5b4dd088fd741aa7288eb7830a54c0a3c9f809359d7f2133610",
+      "output_sha256": "a906888bfcd5f5b4dd088fd741aa7288eb7830a54c0a3c9f809359d7f2133610",
+      "git_blob_sha1": "59faef4a73167ff108e0972d6c1c20460609ad7f",
+      "bytes": 229165,
+      "modified": false
+    },
+    {
+      "file": "Panel2.png",
+      "source": "Panelka/Panels/Panel2.png",
+      "source_size": [
+        512,
+        549
+      ],
+      "output_size": [
+        512,
+        549
+      ],
+      "source_sha256": "f815ab2c4a594057fb9f1058599318ba3790085d0c6277cb1c3902bfe1f71d71",
+      "output_sha256": "f815ab2c4a594057fb9f1058599318ba3790085d0c6277cb1c3902bfe1f71d71",
+      "git_blob_sha1": "a3232994272d68cbaf25d8de17047f89636dba60",
+      "bytes": 290391,
+      "modified": false
+    },
+    {
+      "file": "Panel4.png",
+      "source": "Panelka/Panels/Panel4.png",
+      "source_size": [
+        494,
+        502
+      ],
+      "output_size": [
+        494,
+        502
+      ],
+      "source_sha256": "273ae6c3dd3a4afad531a29986927cfe31b9fe09ef0b1dc6a1a2692fa0cc24e1",
+      "output_sha256": "273ae6c3dd3a4afad531a29986927cfe31b9fe09ef0b1dc6a1a2692fa0cc24e1",
+      "git_blob_sha1": "54777f645e2a5206488902378598007a3a7555c5",
+      "bytes": 369368,
+      "modified": false
+    },
+    {
+      "file": "Panel5.png",
+      "source": "Panelka/Panels/Panel5.png",
+      "source_size": [
+        475,
+        496
+      ],
+      "output_size": [
+        475,
+        496
+      ],
+      "source_sha256": "32e7e8011a155866ec7fdd4076a679894957fceeb987e6636f64eaa0621b929c",
+      "output_sha256": "32e7e8011a155866ec7fdd4076a679894957fceeb987e6636f64eaa0621b929c",
+      "git_blob_sha1": "3940936d6ccb2038bb817faffe33d159119f8771",
+      "bytes": 283180,
+      "modified": false
+    },
+    {
+      "file": "Panel6.png",
+      "source": "Panelka/Panels/Panel6.png",
+      "source_size": [
+        483,
+        494
+      ],
+      "output_size": [
+        483,
+        494
+      ],
+      "source_sha256": "2a82747fc23988032251630395d0f22c83e4f5b5db5de39175eb4c66b0a5488c",
+      "output_sha256": "2a82747fc23988032251630395d0f22c83e4f5b5db5de39175eb4c66b0a5488c",
+      "git_blob_sha1": "fa3955ae6fcceaeb41fe7a06ea02be6f09018133",
+      "bytes": 287544,
+      "modified": false
+    },
+    {
+      "file": "Panel1Edge.png",
+      "source": "Panelka/Panels/Panel1Edge.png",
+      "source_size": [
+        616,
+        497
+      ],
+      "output_size": [
+        616,
+        497
+      ],
+      "source_sha256": "50175e411811a6a4e5af89a729aad319a8ab095bd62987edd397caee11854368",
+      "output_sha256": "50175e411811a6a4e5af89a729aad319a8ab095bd62987edd397caee11854368",
+      "git_blob_sha1": "39493827ae8bb95c3d64d6f9b948872b7f9e8596",
+      "bytes": 248771,
+      "modified": false
+    },
+    {
+      "file": "Panel2Edge.png",
+      "source": "Panelka/Panels/Panel2Edge.png",
+      "source_size": [
+        624,
+        504
+      ],
+      "output_size": [
+        624,
+        504
+      ],
+      "source_sha256": "7a71413df1aeee60024ca5be67187e5f937ac05d8ae6c5b21068b4213a6295fc",
+      "output_sha256": "7a71413df1aeee60024ca5be67187e5f937ac05d8ae6c5b21068b4213a6295fc",
+      "git_blob_sha1": "a2e442ac6dda4018bfdc062726618481cc4c26fa",
+      "bytes": 273497,
+      "modified": false
+    },
+    {
+      "file": "Bricks1diffuse.png",
+      "source": "Panelka/Walls/Bricks/Bricks1diffuse.png",
+      "source_size": [
+        512,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "source_sha256": "f336e1648ec39f39fb4109a96cb4808a6e192226026d8f864b71c67fa9a38ef6",
+      "output_sha256": "f336e1648ec39f39fb4109a96cb4808a6e192226026d8f864b71c67fa9a38ef6",
+      "git_blob_sha1": "7421070a48e6ebd5eac0455f2911ef8be7fbe856",
+      "bytes": 369272,
+      "modified": false
+    },
+    {
+      "file": "Bricks1normal.png",
+      "source": "Panelka/Walls/Bricks/Bricks1normal.png",
+      "source_size": [
+        512,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "source_sha256": "694ea02dc6aac1c8ccc811eac6608cf777d81a6f6e8f84b3b27965c170603f04",
+      "output_sha256": "694ea02dc6aac1c8ccc811eac6608cf777d81a6f6e8f84b3b27965c170603f04",
+      "git_blob_sha1": "1d114c89ffcb58f1c104db08f2fbb338b79c9df4",
+      "bytes": 697215,
+      "modified": false
+    },
+    {
+      "file": "Brick1roughness.png",
+      "source": "Panelka/Walls/Bricks/Brick1roughness.png",
+      "source_size": [
+        512,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "source_sha256": "242ae131b572a8a66554355fcf755cab1bf11133a444e7931fdc3e4c8894b846",
+      "output_sha256": "242ae131b572a8a66554355fcf755cab1bf11133a444e7931fdc3e4c8894b846",
+      "git_blob_sha1": "f4e15a1e51382883d0b91385aae6b04aa204ddb0",
+      "bytes": 311265,
+      "modified": false
+    },
+    {
+      "file": "Bricks2diffuse.png",
+      "source": "Panelka/Walls/Bricks/Bricks2diffuse.png",
+      "source_size": [
+        520,
+        519
+      ],
+      "output_size": [
+        520,
+        519
+      ],
+      "source_sha256": "bb21d63e0c821410a443d7581303e4fa60a6bb6f73dd2902bf56805695a284e8",
+      "output_sha256": "bb21d63e0c821410a443d7581303e4fa60a6bb6f73dd2902bf56805695a284e8",
+      "git_blob_sha1": "f37176759a6bf9ff11eb3dcdaa6ff692753f3eff",
+      "bytes": 500495,
+      "modified": false
+    },
+    {
+      "file": "Bricks2normal.png",
+      "source": "Panelka/Walls/Bricks/Bricks2normal.png",
+      "source_size": [
+        520,
+        519
+      ],
+      "output_size": [
+        520,
+        519
+      ],
+      "source_sha256": "c6c48a1ddac9e7de79e8b7a3e6f8132e5989f3e4911fb85afb49a9bb65363bc2",
+      "output_sha256": "c6c48a1ddac9e7de79e8b7a3e6f8132e5989f3e4911fb85afb49a9bb65363bc2",
+      "git_blob_sha1": "57992a6be6d0a20dc670394d12a8524e1b91dc62",
+      "bytes": 576988,
+      "modified": false
+    },
+    {
+      "file": "Bricks2roughness.png",
+      "source": "Panelka/Walls/Bricks/Bricks2roughness.png",
+      "source_size": [
+        512,
+        512
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "source_sha256": "601b44afcd5a12281100509c39d5ee90c89764ab681a47a8019e43d47616349c",
+      "output_sha256": "601b44afcd5a12281100509c39d5ee90c89764ab681a47a8019e43d47616349c",
+      "git_blob_sha1": "8f68b91b7b515699c3f371efb58b7a4a4da42226",
+      "bytes": 329014,
+      "modified": false
+    },
+    {
+      "file": "GreenMetalDoordiffuse.png",
+      "source": "Panelka/Doors/GreenMetalDoordiffuse.png",
+      "source_size": [
+        664,
+        931
+      ],
+      "output_size": [
+        365,
+        512
+      ],
+      "source_sha256": "526d097145f74c1079510b815291e56d278ddbc60cc882318ff5fc9b3c232f46",
+      "output_sha256": "64a3f485c41991a494910e2aecc0e0d80b042f8067f5bb099cccc0e67a34955b",
+      "git_blob_sha1": "d04d149e6b4739bb61a4b20ce6482e106eafb374",
+      "bytes": 315122,
+      "modified": true
+    },
+    {
+      "file": "GreenMetalDoornormal.png",
+      "source": "Panelka/Doors/GreenMetalDoornormal.png",
+      "source_size": [
+        664,
+        931
+      ],
+      "output_size": [
+        365,
+        512
+      ],
+      "source_sha256": "7db0f1744ee016bf6e6305c4eb85d86e139883b67bb631aaba42427b6e3318da",
+      "output_sha256": "7a707a384728ff252f5c3db34d46514089a3de8cfd91131c151b83ec80d77cf9",
+      "git_blob_sha1": "5057f6817dfdff7099ddb903e317ceaed494b96f",
+      "bytes": 357192,
+      "modified": true
+    },
+    {
+      "file": "Went1diffuse.png",
+      "source": "Panelka/Wents/Went1diffuse.png",
+      "source_size": [
+        1407,
+        1663
+      ],
+      "output_size": [
+        433,
+        512
+      ],
+      "source_sha256": "6b9cdc5834e028fe1ee9f7d45d1faeaac87513ff8c6bbc061de7710a2063e2a7",
+      "output_sha256": "327661523ad611cc47cf4cf5aa7a05548001cc3153ab3a81c832c69e309c245c",
+      "git_blob_sha1": "120622e7ff00bc1fca2c813057969675b1a65a7c",
+      "bytes": 326208,
+      "modified": true
+    },
+    {
+      "file": "Went1normal.png",
+      "source": "Panelka/Wents/Went1normal.png",
+      "source_size": [
+        1407,
+        1663
+      ],
+      "output_size": [
+        433,
+        512
+      ],
+      "source_sha256": "5d4b3657f3262975556e01f17a6b32c1ea36c878fb4e149ce26bd521d42ab310",
+      "output_sha256": "caeb8f583cdca019b301da854e878691bc497a88306ca6840189d926bb0b11dd",
+      "git_blob_sha1": "9bc7a24b4be74c77d33c088c8f636fc1faf2f42b",
+      "bytes": 427818,
+      "modified": true
+    },
+    {
+      "file": "Slating1diffuse.png",
+      "source": "Panelka/Новая папка/Slating1diffuse.png",
+      "source_size": [
+        866,
+        867
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "source_sha256": "7ad923dfa8a1cab4fc8f77dfae1ea2bcde63287cbf7407c5cd3092b1198aca36",
+      "output_sha256": "7459d41d07d4dafb3e6c18be304f30ba698d2c310897f3953fe6671735df6d95",
+      "git_blob_sha1": "9a07dc697ee0b7a4adf9b29a340b43f0ee9ba30d",
+      "bytes": 497442,
+      "modified": true
+    },
+    {
+      "file": "Slating1normal.png",
+      "source": "Panelka/Новая папка/Slating1normal.png",
+      "source_size": [
+        866,
+        867
+      ],
+      "output_size": [
+        512,
+        512
+      ],
+      "source_sha256": "4eb7fbe3dc3dfc171b8677a44530d23a99c1442634ace721a9a45f0f2702dcd1",
+      "output_sha256": "1a37e5154ccb4e8e526064ce7b5b23a52676d713e93b8fb48f2eccbd1bdd233c",
+      "git_blob_sha1": "b9ff9f5c05ade3ce8ddc5e80a379fae1a176e7f7",
+      "bytes": 552272,
+      "modified": true
+    }
+  ]
+}
