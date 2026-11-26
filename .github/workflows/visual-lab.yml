@@ -100,6 +100,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/zero_roof_construction.py /tmp/pcg_zero_tile_abi
+      - name: Partial balcony envelopes and compact closed roof guards
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_balcony_guard_variants.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
