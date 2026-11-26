@@ -121,6 +121,21 @@ def gutters(c):
     m["trough_bottom_m"]=h-.26
     return m
 
+def require_connected_faces(m):
+    """Reuse Trimesh edge-based face adjacency, without optional graph engines.
+    For these small solids a direct reachability walk is sufficient.
+    """
+    neighbors=[[] for _ in m.faces]
+    for a,b in m.face_adjacency:
+        neighbors[a].append(b);neighbors[b].append(a)
+    assert neighbors
+    seen={0};todo=[0]
+    while todo:
+        for b in neighbors[todo.pop()]:
+            if b not in seen:
+                seen.add(b);todo.append(b)
+    assert len(seen)==len(m.faces),(len(seen),len(m.faces))
+
 def swept_pipe(path,radius=.05,n=6):
     """Small explicit convex-section sweep. Existing box recipe cannot form
     a continuous elbow. Ring frames use the bisector of adjacent segments.
@@ -147,7 +162,7 @@ def swept_pipe(path,radius=.05,n=6):
         faces.extend([(0,j+1,j),((len(p)-1)*n,(len(p)-1)*n+j,(len(p)-1)*n+j+1)])
     m=solid(rings,faces)
     # Every sample has the expected cross-section and connected topology.
-    assert len(m.split(only_watertight=True))==1
+    require_connected_faces(m)
     return m.vertices[m.faces]
 
 def bend_drain(c,m):
@@ -211,7 +226,21 @@ def shader(old,cells,styles,joints,enhanced):
         return col,em
     return shade
 
+def test_connected_faces():
+    # Watertightness alone does not exclude multiple disconnected solids.
+    a=trimesh.creation.box();b=a.copy();b.apply_translation([3.,0.,0.])
+    require_connected_faces(a)
+    disconnected=trimesh.util.concatenate([a,b])
+    assert disconnected.is_watertight and disconnected.is_winding_consistent
+    try:require_connected_faces(disconnected)
+    except AssertionError:pass
+    else:raise AssertionError("disconnected closed solids accepted")
+    # Exact centerline of the failed brick_stack fixture.
+    t=swept_pipe([(.28,-.065,.10),(.28,-.065,14.24),(.28,-.40,14.61),(.28,-.40,14.74)])
+    assert t.shape==(44,3,3)
+
 def main(decoder):
+    test_connected_faces()
     OUT.mkdir(parents=True,exist_ok=True)
     cases=arch.fixtures();styles={c["building_id"]:c["id"] for c in cases}
     op=tile.plan_facades
