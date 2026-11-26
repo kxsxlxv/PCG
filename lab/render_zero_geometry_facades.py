@@ -100,7 +100,7 @@ def shader(uv,r,maps,mode,dense=False):
         emission[lit&(hh%4==0)]=np.array([.66,.69,.57])
     return color,emission
 
-def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None,visibility=None,lighting=None,capture_ids=None,two_sided=None,resolution=(640,640)):
+def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None,visibility=None,lighting=None,capture_ids=None,two_sided=None,resolution=(640,640),depth_only=False):
     width,height=map(int,resolution)
     if width<=0 or height<=0:raise ValueError("invalid resolution")
     if capture_ids is not None and capture_ids.shape!=(height,width):raise ValueError("capture_ids size mismatch")
@@ -144,6 +144,7 @@ def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None
             mask[mask]=keep;sample=sample[keep]
         dst[mask]=dz[mask]
         if capture_ids is not None:capture_ids[y0:y1,x0:x1][mask]=int(ids[k])
+        if depth_only:continue
         color,emission=shader(sample,record,maps,mode,dense)
         shade=.68+.32*max(0,n@light)
         if lighting is not None:
