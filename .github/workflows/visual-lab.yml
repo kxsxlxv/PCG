@@ -84,6 +84,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/zero_roof_budgets.py
+      - name: Reference-driven facade zoning and balcony equipment budgets
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_facade_architecture.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
