@@ -126,6 +126,12 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/zero_integrated_cutouts.py /tmp/pcg_zero_tile_abi
+      - name: External balconies only with preserved host and cutout guards
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_external_balconies.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
