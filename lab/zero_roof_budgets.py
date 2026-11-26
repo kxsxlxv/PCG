@@ -13,6 +13,7 @@ import numpy as np
 import trimesh
 from PIL import Image,ImageDraw
 from shapely.geometry import Polygon,box
+from shapely.ops import unary_union
 from pcg._grammar_boxes import _oriented_box
 from pcg.footprint import Footprint
 from pcg.massing import build_massing
@@ -39,7 +40,11 @@ def fixture():
 
 def triangles(shell):
     v=np.asarray(shell.vertices,dtype=float)
-    return np.asarray([v[list(t)] for role,t in shell.triangles() if role=="roof"])
+    # Shell.triangles() yields (surface ID, indices), not (role, indices).
+    roles={surface.id:surface.role for surface in shell.surfaces}
+    out=np.asarray([v[list(t)] for sid,t in shell.triangles() if roles[sid]=="roof"])
+    assert out.ndim==3 and out.shape[1:]==(3,3) and len(out)>0, shell.building_id
+    return out
 
 def roof_z(roof,x,y):
     # Exact barycentric support on the already generated piecewise planar roof.
@@ -64,6 +69,18 @@ def plan(c):
     f=Footprint(c["building_id"],c["outer"],c["holes"])
     shell=build_massing(f,c["eave_m"],c["roof"],c["rise"]).shell
     roof=triangles(shell);poly=f.polygon();x0,y0,x1,y1=poly.bounds
+    # Independent roof projection coverage: a nonempty but incorrectly
+    # filtered subset must fail too, including across a ridge.
+    projected=[Polygon(t[:,:2]) for t in roof]
+    coverage=unary_union(projected)
+    assert coverage.symmetric_difference(poly).area<1e-7, c["id"]
+    assert abs(sum(p.area for p in projected)-poly.area)<1e-7, c["id"]
+    assert all(p.area>0 for p in projected)
+    if c["roof"]=="flat":
+        np.testing.assert_allclose(roof[:,:,2],c["eave_m"],rtol=0,atol=1e-9)
+    else:
+        np.testing.assert_allclose([roof[:,:,2].min(),roof[:,:,2].max()],
+                                   [c["eave_m"],c["eave_m"]+c["rise"]],rtol=0,atol=1e-9)
     w=x1-x0;d=y1-y0
     modules=[];rejected=[];occupied=[]
     def add(kind,key,cx,cy,ww,dd,hh,cap=False):
@@ -80,7 +97,7 @@ def plan(c):
             hit=Polygon(t[:,:2]).intersection(outer)
             if hit.geom_type=="Polygon" and not hit.is_empty:
                 z.extend(roof_z(roof,x,y) for x,y in list(hit.exterior.coords))
-        assert z
+        assert z,(c["id"],key,"no roof support intersection")
         bottom=min(z)-.04;top=max(z)+hh
         geom=[(kind,box_mesh(cx,cy,ww,dd,top-bottom,bottom))]
         if cap:geom.append(("cap",box_mesh(cx,cy,ww+.24,dd+.24,.12,top)))
@@ -147,6 +164,13 @@ def append(groups,table,c,m):
 def main():
     OUT.mkdir(parents=True,exist_ok=True);cases=fixture()
     g0,t0,cells,owners=tile.compile_scene(cases,audit_samples=1024)
+    # Regression: the original role/ID mixup returned an empty roof list.
+    # Exercise each supported roof kind with an independent known center height.
+    for c in cases:
+        f=Footprint(c["building_id"],c["outer"],c["holes"])
+        shell=build_massing(f,c["eave_m"],c["roof"],c["rise"]).shell
+        r=triangles(shell);center=f.polygon().centroid
+        assert abs(roof_z(r,center.x,center.y)-(c["eave_m"]+c["rise"]))<1e-7,c["id"]
     plans={c["id"]:plan(c) for c in cases}
     for c in cases:
         a,b=plans[c["id"]];aa,bb=plan(c)
