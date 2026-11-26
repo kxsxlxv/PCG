@@ -78,7 +78,9 @@ def module_library(n=256):
         colors.append(srgb_decode(rgb));nhs.append(nh);masks.append(mask)
     return np.array(colors),np.array(nhs),np.array(masks)
 
-def main():
+def main(detail_candidate=False):
+    global OUT
+    if detail_candidate:OUT=Path("artifacts/zero-detail")
     OUT.mkdir(parents=True,exist_ok=True)
     root=Path("artifacts/zero-multitile")
     idx=json.loads((root/"tiles128/index.json").read_text())
@@ -99,7 +101,7 @@ def main():
     renderer=ctx.info["GL_RENDERER"]
     assert any(x in renderer.lower() for x in ("llvmpipe","softpipe","swrast","software")),renderer
     prog=ctx.program(vertex_shader=Path("lab/shaders/zero_facade.vert").read_text(),
-                     fragment_shader=Path("lab/shaders/zero_facade.frag").read_text())
+                     fragment_shader=Path("lab/shaders/zero_facade_detail.frag" if detail_candidate else "lab/shaders/zero_facade.frag").read_text())
     keep=[]
     def buffer(a):
         b=ctx.buffer(np.ascontiguousarray(a).tobytes());keep.append(b);return b
@@ -129,6 +131,10 @@ def main():
         if k=="basecolor":arr=srgb_decode(arr)
         array_tex(name,arr,dtype,unit)
     mc,mn,mm=module_library()
+    if detail_candidate:
+        from zero_detail_modules import library
+        extra=library(OUT/"authored_modules")
+        mc,mn,mm=(np.concatenate((a,b),axis=0) for a,b in zip((mc,mn,mm),extra))
     array_tex("module_color",mc,"f2",6);array_tex("module_nh",mn,"f1",7);array_tex("module_mask",mm,"f1",8)
     mask=np.uint8(np.round(noise(256,12,np.random.default_rng(447))*255))
     macro=ctx.texture((256,256),1,mask.tobytes(),dtype="f1");macro.build_mipmaps()
@@ -191,6 +197,26 @@ def main():
     ImageDraw.Draw(sheet).text((8,8),"Actual GLSL/EGL software renderer / shared arrays / packed ABI / zero opening geometry",fill=(0,0,0))
     lanes=[(close,0,1.,0.,"close_flat"),(close,1,1.,0.,"close_pbr"),(close,2,1.,0.,"close_parallax"),
            (block,2,1.,0.,"block_day"),(block,2,.04,.68,"block_night_high"),(block,2,.04,.10,"block_night_low")]
+    if detail_candidate:
+        lanes=[(close,2,1.,0.,"baseline_day"),(close,3,1.,0.,"relief_day"),(close,4,1.,0.,"interior_day"),
+               (close,2,.04,.68,"baseline_night"),(close,3,.04,.68,"relief_night"),(close,4,.04,.68,"interior_night")]
+        candidate_meta,cd=render(block,4,1.,.5,1)
+        np.testing.assert_array_equal(candidate_meta,meta);assert cd==md
+        for prob in (.10,.68):
+            e3,d3=render(block,3,.04,prob,3);e4,d4=render(block,4,.04,prob,3)
+            np.testing.assert_array_equal(e3,e4);assert d3==d4==md
+            lit=np.any(e4[...,:3]>1e-7,axis=-1)&valid
+            assert np.all(np.isin(roles[lit],[1,2])) and np.any(lit)
+        comparison={}
+        for lane,name in ((3,"relief"),(4,"interior")):
+            a,da=render(close,2,1.,0.);b2,db=render(close,lane,1.,0.)
+            assert da==db
+            diff=np.abs(a[...,:3]-b2[...,:3])
+            comparison[name]={"mean_abs_linear_rgb_delta":float(diff.mean()),
+                              "changed_pixels":int(np.any(diff>1e-5,axis=-1).sum())}
+            assert comparison[name]["changed_pixels"]>100
+        a,da=render(close,3,1.,0.);b2,db=render(close,4,1.,0.)
+        assert da==db and np.any(np.abs(a-b2)>1e-5)
     depths={}
     for i,(camera,lane,day,prob,name) in enumerate(lanes):
         a,d=render(camera,lane,day,prob);key=i//3
@@ -201,6 +227,13 @@ def main():
         ImageDraw.Draw(im).text((8,8),name,fill=(225,225,225) if day<.5 else (0,0,0))
         sheet.paste(im,((i%3)*size,(i//3)*size+32))
     sheet.save(OUT/"contact.png")
+    if detail_candidate:
+        block_sheet=Image.new("RGB",(size*3,size*2))
+        for i,(lane,day,prob) in enumerate([(2,1.,0.),(3,1.,0.),(4,1.,0.),(2,.04,.68),(3,.04,.68),(4,.04,.68)]):
+            a,d=render(block,lane,day,prob);assert d==md
+            block_sheet.paste(image(a),((i%3)*size,(i//3)*size))
+        block_sheet.save(OUT/"block_contact.png")
+
     report={"renderer":renderer,"gl_version":ctx.version_code,"actual_glsl_compile":True,
         "source_tile":chosen["manifest"],"buildings":chosen["buildings"],"triangles":len(faces),
         "one_indexed_draw_per_view":True,"opening_triangles_added":0,"material_layers":len(LAYERS),
@@ -212,10 +245,22 @@ def main():
         "limitations":["software OpenGL, not UUSL/UNIGINE or hardware GPU","synthetic source textures and approximate GGX/analytic reflection, no shadows/GI",
         "simple parallax shifts glass interior only","global illustrative occupancy probability, not full per-use profile ABI",
         "module mip filtering but no measured flight anti-aliasing or native LOD","no native GPU timing, draw count only in this lab"]}
+    if detail_candidate:
+        report.update({"shared_window_door_modules":18,"new_authored_modules":12,
+            "baseline_retained_in_same_arrays":6,"candidate_comparison":comparison,
+            "opening_metadata_identical":True,"interior_toggle_emission_identical":True,
+            "original_geometry_and_camera":True,"candidate_scope":"synthetic authored relief modules, analytic box interior, semantic bands/runoff",
+            "source_asset_license":"original PCG synthetic; no external assets",
+            "limitations":report["limitations"]+["no photographs, shadows, GI or native PBR validation",
+                "analytic interior, no room texture or geometric depth; not POM",
+                "no material LOD yet, no hardware performance measurements"]})
     (OUT/"report.json").write_text(json.dumps(report,indent=2))
-    print("GLSL_REPORT "+json.dumps(report),flush=True)
+    print(("DETAIL_REPORT " if detail_candidate else "GLSL_REPORT ")+json.dumps(report),flush=True)
     thumb=sheet.copy();thumb.thumbnail((1100,760));b=io.BytesIO();thumb.save(b,format="JPEG",quality=70,optimize=True)
     data=base64.b64encode(b.getvalue()).decode()
-    for i in range(0,len(data),4000):print(f"GLSL_PREVIEW_{i//4000:03d} "+data[i:i+4000],flush=True)
+    for i in range(0,len(data),4000):print(f"{'DETAIL' if detail_candidate else 'GLSL'}_PREVIEW_{i//4000:03d} "+data[i:i+4000],flush=True)
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+    import argparse
+    ap=argparse.ArgumentParser();ap.add_argument("--detail-candidate",action="store_true")
+    main(ap.parse_args().detail_candidate)
