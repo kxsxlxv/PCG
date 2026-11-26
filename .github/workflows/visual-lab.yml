@@ -80,6 +80,10 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/render_zero_facade_glsl.py --detail-candidate
+      - name: Actual roof silhouette geometry budgets
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_roof_budgets.py
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src

@@ -100,9 +100,9 @@ def shader(uv,r,maps,mode,dense=False):
         emission[lit&(hh%4==0)]=np.array([.66,.69,.57])
     return color,emission
 
-def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None):
+def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None):
     size=640
-    view=np.array([1.,-1.5,.85]);view/=np.linalg.norm(view)
+    view=np.array([1.,-1.5,.85] if view_override is None else view_override,dtype=float);view/=np.linalg.norm(view)
     right=np.cross([0,0,1],view);right/=np.linalg.norm(right)
     up=np.cross(view,right)
     center=np.array([6.,4.,4.]) if close else np.array([39.,27.,5.])
