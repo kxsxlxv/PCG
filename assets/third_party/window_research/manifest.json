@@ -1,0 +1,50 @@
+{
+  "schema": "pcg.window_research_assets.v1",
+  "sources": [
+    {
+      "folder": "gaxil",
+      "repo": "Gaxil/Unity-InteriorMapping",
+      "commit": "78194254efe646aee5c9784dc23338a263c14343",
+      "license": "MIT"
+    },
+    {
+      "folder": "three-fenestra",
+      "repo": "codedgar/three-fenestra",
+      "commit": "d63feeb1d43fc0156d622eeb9f3e115532147113",
+      "license": "MIT"
+    }
+  ],
+  "files": [
+    {
+      "path": "gaxil/BuildingTexture_RMW.png",
+      "git_blob_sha1": "ea70be72412159f3ed96f6cf9b97c78b1f1afb47",
+      "bytes": 314296
+    },
+    {
+      "path": "gaxil/BuildingTexture_normal3.png",
+      "git_blob_sha1": "3030264fc87e25564bbc155f879ffa558c261c1c",
+      "bytes": 375730
+    },
+    {
+      "path": "gaxil/BuildingTexture_basecolorFull.png",
+      "git_blob_sha1": "5675e3ffa9d30f328f980da61cabe85364f956fe",
+      "bytes": 677455
+    },
+    {
+      "path": "gaxil/DecorationAtlas.png",
+      "git_blob_sha1": "665e099d79b2bc05e4e3c1c34eab1122084be420",
+      "bytes": 854504
+    },
+    {
+      "path": "three-fenestra/rooms.webp",
+      "git_blob_sha1": "1fc29c5318fc1d956c5b88fcf51f8850fe749cbf",
+      "bytes": 118186
+    },
+    {
+      "path": "three-fenestra/overlay.webp",
+      "git_blob_sha1": "d215fbd823845d746123ffc472ed4e7d1c1ae5db",
+      "bytes": 256578
+    }
+  ],
+  "runtime_integrated": false
+}
