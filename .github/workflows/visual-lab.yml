@@ -114,6 +114,12 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/zero_alpha_cutout.py
+      - name: Visual repair of full-bay recessed loggias with cutout and shadow depth
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_loggia_repair.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src

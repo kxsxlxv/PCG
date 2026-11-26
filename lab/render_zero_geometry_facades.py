@@ -100,7 +100,7 @@ def shader(uv,r,maps,mode,dense=False):
         emission[lit&(hh%4==0)]=np.array([.66,.69,.57])
     return color,emission
 
-def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None):
+def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None,ppm_override=None,view_override=None,visibility=None,lighting=None,capture_ids=None,two_sided=None):
     size=640
     view=np.array([1.,-1.5,.85] if view_override is None else view_override,dtype=float);view/=np.linalg.norm(view)
     right=np.cross([0,0,1],view);right/=np.linalg.norm(right)
@@ -118,7 +118,10 @@ def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None
     for k in range(0,len(v),3):
         if close and table[int(ids[k])]["building"]!="fixture:0":continue
         p=v[k:k+3];n=np.cross(p[1]-p[0],p[2]-p[0]);n/=np.linalg.norm(n)
-        if n@view<=1e-9:continue
+        record=table[int(ids[k])]
+        if n@view<=1e-9:
+            if two_sided is None or not two_sided(record) or abs(n@view)<=1e-9:continue
+            n=-n
         a,b,c=xy[k:k+3]
         lo=np.maximum(np.floor(np.min([a,b,c],axis=0)).astype(int),0)
         hi=np.minimum(np.ceil(np.max([a,b,c],axis=0)).astype(int)+1,size)
@@ -132,10 +135,18 @@ def render(v,uv,ids,table,maps,mode,dense=False,close=False,center_override=None
         wc=1-wa-wb
         dz=wa*z[k]+wb*z[k+1]+wc*z[k+2];dst=depth[y0:y1,x0:x1]
         mask=(wa>=-1e-8)&(wb>=-1e-8)&(wc>=-1e-8)&(dz>dst)
-        dst[mask]=dz[mask]
         sample=wa[mask,None]*uv[k]+wb[mask,None]*uv[k+1]+wc[mask,None]*uv[k+2]
-        color,emission=shader(sample,table[int(ids[k])],maps,mode,dense)
+        if visibility is not None:
+            keep=visibility(sample,record)
+            assert keep.shape==(len(sample),) and keep.dtype==bool
+            mask[mask]=keep;sample=sample[keep]
+        dst[mask]=dz[mask]
+        if capture_ids is not None:capture_ids[y0:y1,x0:x1][mask]=int(ids[k])
+        color,emission=shader(sample,record,maps,mode,dense)
         shade=.68+.32*max(0,n@light)
+        if lighting is not None:
+            world=wa[mask,None]*p[0]+wb[mask,None]*p[1]+wc[mask,None]*p[2]
+            shade=lighting(world,n,record)[:,None]
         color=color*shade*(.055 if mode=="night" else 1.)+emission
         img[y0:y1,x0:x1][mask]=np.uint8(np.round(srgb_encode(color)*255))
     assert np.isfinite(depth).sum()>100
