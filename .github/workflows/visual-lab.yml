@@ -147,6 +147,12 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/zero_unified_architecture.py /tmp/pcg_zero_tile_abi
+      - name: Regional photoreal material and semantic room research on exact stage-26 geometry
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_photoreal.py
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src

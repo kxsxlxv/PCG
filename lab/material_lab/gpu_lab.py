@@ -119,16 +119,29 @@ layout(location=0) in vec3 p;layout(location=1) in vec2 st;layout(location=2) in
 uniform mat4 VP;out vec3 world;out vec2 uv;flat out int rid;flat out vec3 gn;flat out vec3 tangent;
 void main(){world=p;uv=st;rid=int(record+.5);gn=normal;tangent=tan;gl_Position=VP*vec4(p,1);}
 '''
+def fragment_source(photoreal=False,probe=False):
+    base=(HERE/'renderer.glsl').read_text()
+    defines=''
+    if photoreal:
+        marker='// PCG_PHOTOREAL_INCLUDE'
+        assert base.count(marker)==1
+        base=base.replace(marker,(HERE/'photoreal27.glsl').read_text())
+        defines='#define PCG_PHOTOREAL 1\n'
+    if probe:
+        assert photoreal
+        defines+='#define PCG_PHOTOREAL_PROBE 1\n'
+    return '#version 330 core\n'+defines+(HERE/'material_math.glsl').read_text()+base
+
 class GL:
-    def __init__(self,vertices,meta,ops,arrays):
-        self.p=gl('glCreateProgram',U)();frag='#version 330 core\n'+(HERE/'material_math.glsl').read_text()+(HERE/'renderer.glsl').read_text()
+    def __init__(self,vertices,meta,ops,arrays,photoreal=False,cutout_mips=None):
+        self.p=gl('glCreateProgram',U)();frag=fragment_source(photoreal)
         for typ,s in ((0x8B31,VERT),(0x8B30,frag)):gl('glAttachShader',None,U,U)(self.p,shader(typ,s))
         gl('glLinkProgram',None,U)(self.p);v=I();gl('glGetProgramiv',None,U,U,P)(self.p,0x8B82,C.byref(v));assert v.value;gl('glUseProgram',None,U)(self.p)
         self.vao=gen('glGenVertexArrays');gl('glBindVertexArray',None,U)(self.vao);self.vbo=gen('glGenBuffers');gl('glBindBuffer',None,U,U)(0x8892,self.vbo);gl('glBufferData',None,U,C.c_ssize_t,P,U)(0x8892,vertices.nbytes,ptr(vertices),0x88E4)
         for i,n,offset in ((0,3,0),(1,2,3),(2,1,5),(3,3,6),(4,3,9)):
             gl('glEnableVertexAttribArray',None,U)(i);gl('glVertexAttribPointer',None,U,I,U,C.c_ubyte,I,P)(i,n,0x1406,0,48,P(offset*4))
         self.count=len(vertices);gl('glEnable',None,U)(0x0B71);gl('glDisable',None,U)(0x0B44);gl('glDisable',None,U)(0x0BE2)
-        a,n,r,m,room,e=arrays;self.tex2(meta,0,'metadata',False);self.tex2(ops,1,'openings',False);self.texarray(a,2,'albedoMaps');self.texarray(n,3,'normalMaps');self.texarray(r,4,'ormMaps');self.texarray(room,5,'roomMaps');self.tex2(e,6,'envMap',True,True);self.texarray(m,8,'cutoutMaps');self.shadow=2048;self.sfb,self.sd,_=self.framebuffer(self.shadow,self.shadow,True);self.unit(7,0x0DE1,self.sd);self.uniform('shadowMap',7);self.fbos={}
+        a,n,r,m,room,e=arrays;self.tex2(meta,0,'metadata',False);self.tex2(ops,1,'openings',False);self.texarray(a,2,'albedoMaps');self.texarray(n,3,'normalMaps');self.texarray(r,4,'ormMaps');self.texarray(room,5,'roomMaps');self.tex2(e,6,'envMap',True,True);self.texarray(m,8,'cutoutMaps',mips=cutout_mips);self.shadow=2048;self.sfb,self.sd,_=self.framebuffer(self.shadow,self.shadow,True);self.unit(7,0x0DE1,self.sd);self.uniform('shadowMap',7);self.fbos={}
     def replace_vertices(self,vertices):
         # Shared metadata/maps remain resident. A different LOD or isolated
         # building only replaces the triangle stream; legacy rendering unchanged.
@@ -154,8 +167,18 @@ class GL:
         a=np.ascontiguousarray(a,np.float32);h,w,c=a.shape;t=gen('glGenTextures');self.unit(unit,0x0DE1,t);gl('glTexImage2D',None,U,I,I,I,I,I,U,U,P)(0x0DE1,0,0x8814 if c==4 else 0x8815,w,h,0,0x1908 if c==4 else 0x1907,0x1406,ptr(a));self.param(0x0DE1,0x2801,0x2703 if mip else 0x2600);self.param(0x0DE1,0x2800,0x2601 if mip else 0x2600);self.param(0x0DE1,0x2802,0x2901 if repeat else 0x812F);self.param(0x0DE1,0x2803,0x812F)
         if mip:gl('glGenerateMipmap',None,U)(0x0DE1)
         self.uniform(name,unit);return t
-    def texarray(self,a,unit,name):
-        a=np.ascontiguousarray(a,np.float32);l,h,w,c=a.shape;t=gen('glGenTextures');self.unit(unit,0x8C1A,t);gl('glTexImage3D',None,U,I,I,I,I,I,I,U,U,P)(0x8C1A,0,0x881A if c==4 else 0x881B,w,h,l,0,0x1908 if c==4 else 0x1907,0x1406,ptr(a));self.param(0x8C1A,0x2801,0x2703);self.param(0x8C1A,0x2800,0x2601);self.param(0x8C1A,0x2802,0x2901 if name not in ('roomMaps','cutoutMaps') else 0x812F);self.param(0x8C1A,0x2803,0x2901 if name not in ('roomMaps','cutoutMaps') else 0x812F);gl('glGenerateMipmap',None,U)(0x8C1A)
+    def texarray(self,a,unit,name,mips=None):
+        a=np.ascontiguousarray(a,np.float32);l,h,w,c=a.shape;t=gen('glGenTextures');self.unit(unit,0x8C1A,t);gl('glTexImage3D',None,U,I,I,I,I,I,I,U,U,P)(0x8C1A,0,0x881A if c==4 else 0x881B,w,h,l,0,0x1908 if c==4 else 0x1907,0x1406,ptr(a));self.param(0x8C1A,0x2801,0x2703);self.param(0x8C1A,0x2800,0x2601);self.param(0x8C1A,0x2802,0x2901 if name not in ('roomMaps','cutoutMaps') or (name=='cutoutMaps' and mips is not None) else 0x812F);self.param(0x8C1A,0x2803,0x2901 if name not in ('roomMaps','cutoutMaps') else 0x812F)
+        if mips is None:gl('glGenerateMipmap',None,U)(0x8C1A)
+        else:
+            assert name=='cutoutMaps' and np.array_equal(a,mips[0])
+            upload=gl('glTexImage3D',None,U,I,I,I,I,I,I,U,U,P)
+            for i,level in enumerate(mips[1:],1):
+                level=np.ascontiguousarray(level,np.float32)
+                assert level.shape==(l,max(1,h>>i),max(1,w>>i),c)
+                upload(0x8C1A,i,0x881A if c==4 else 0x881B,level.shape[2],level.shape[1],l,0,0x1908 if c==4 else 0x1907,0x1406,ptr(level))
+            self.param(0x8C1A,0x813D,len(mips)-1)
+            assert gl('glGetError',U)()==0
         maxa=F();gl('glGetFloatv',None,U,P)(0x84FF,C.byref(maxa));
         if maxa.value>=1:gl('glTexParameterf',None,U,U,F)(0x8C1A,0x84FE,min(8.,maxa.value))
         self.uniform(name,unit);return t

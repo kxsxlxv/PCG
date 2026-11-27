@@ -25,6 +25,9 @@ vec3 brdf(vec3 a,vec3 n,vec3 v,float r,float metal,float ao,vec3 p,float direct)
 vec3 textureNormal(int layer,vec2 q,vec3 n,vec3 t,vec3 b){vec3 z=texture(normalMaps,vec3(q,float(layer))).rgb*2.-1.;z.xy*=.65;return normalize(t*z.x+b*z.y+n*max(.1,z.z));}
 vec3 matTint(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct,vec3 tint){vec3 a=texture(albedoMaps,vec3(q,float(layer))).rgb*tint;vec3 orm=texture(ormMaps,vec3(q,float(layer))).rgb;return brdf(a,textureNormal(layer,q,n,t,b),v,orm.g,orm.b,orm.r,p,direct);}
 vec3 mat(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct,float tint){return matTint(layer,q,p,n,t,b,v,direct,vec3(tint));}
+#ifdef PCG_PHOTOREAL
+// PCG_PHOTOREAL_INCLUDE
+#else
 // Window-frame profiles: four sash patterns x four coherent palettes.
 vec3 roomRay(vec2 q,vec2 ratio,vec2 size,float key,bool lobby){
     float dep=lobby?3.8:2.6;vec3 d=vec3(-ratio/size,1.);vec3 p=vec3(clamp(q,0.,1.),0.);vec4 hit=loggiaExit(p,d,vec3(0),vec3(1,1,dep));
@@ -128,3 +131,5 @@ void main(){
     }else{vec2 q=vec2(uv.x,-uv.y)/a.z;c=mat(layer,q,world,n,t,-b,v,direct,1.);}
     color=vec4(max(c,vec3(0)),1.);
 }
+
+#endif // PCG_PHOTOREAL
