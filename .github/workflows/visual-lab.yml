@@ -165,6 +165,12 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/zero_reference_assets.py --out artifacts/zero-reference-pbr
+      - name: Reference equipment on matching Near and Lite geometry with PBR overlay
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_reference_equipment.py --overlay artifacts/zero-reference-pbr --out artifacts/zero-reference-equipment
       - name: Package replay source for private offline inputs
         run: git archive --format=zip -o /tmp/pcg-stage29-replay.zip HEAD lab src assets/third_party
       - uses: actions/upload-artifact@v4

@@ -10,7 +10,7 @@ from PIL import Image,ImageDraw
 sys.path.insert(0,str(Path(__file__).resolve().parent/'material_lab'))
 import external29 as ext
 import zero_photoreal as prev
-import zero_natural_architecture as stage28
+from quant_probe import quant_probe
 import appearance28 as ap
 import gpu_lab as gpu
 
@@ -83,7 +83,7 @@ def run(source,out,private=None):
     renderer.tex2(candidate,0,'metadata',False)
     for j,k in enumerate(('albedoMaps','normalMaps','ormMaps')):renderer.texarray(arrays[j],j+2,k)
     renderer.uniform('externalPbrLayers',ext.AUTHORED_MASK)
-    quant=stage28.quant_probe(renderer,arrays)
+    quant=quant_probe(renderer,arrays)
     # Quant probe restores the original program; explicit uniform assignment.
     renderer.uniform('externalPbrLayers',ext.AUTHORED_MASK)
     results=[];sheet=Image.new('RGB',(960,len(views)*305),(232,234,236));d=ImageDraw.Draw(sheet)

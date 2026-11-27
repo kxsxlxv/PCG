@@ -215,6 +215,16 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
 }
 vec3 phSurface(int id,vec2 s,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct){
     vec4 a=M(id,0),prop=M(id,8),q=M(id,12);int role=int(q.z),layer=int(a.y);
+    // Stage 29: only new equipment triangles encode negative local U tags.
+    if(layer==12&&s.x<-.99){
+        float k=-s.x;vec3 col=vec3(.39,.42,.43);float rough=.55;
+        if(k<2.01){vec2 f=vec2(k-1.,s.y)-.5;float r=length(f);
+            float fan=step(r,.42);float blade=.5+.5*cos(atan(f.y,f.x)*7.+r*13.);
+            col=mix(col,vec3(.045)+.10*blade,fan);if(r<.095)col=vec3(.22,.24,.25);
+            if(fract(s.y*22.)<.13&&r<.43)col*=.50;rough=.48;
+        }else if(k<4.01){float l=fract(s.y*16.);col*=mix(.24,1.,smoothstep(.15,.43,l));}
+        return brdf(col,n,v,rough,.18,1.,p,direct);
+    }
     vec2 xy=p.xy-q.xy;float age=prop.z;
     float tint=M(id,10).x*(1.+age*(phNoise(xy*.35,prop.w)-.5)*.12);vec2 st=vec2(s.x,-s.y)/a.z;
     if((role==1||role==2)&&layer>=33&&layer<=34){
@@ -273,7 +283,7 @@ void main(){
 #endif
             c=phGlass(back,n,v,0,.135,M(rid,8).z*.3);
         }
-    }else if(kind==5){vec2 s=uv/M(rid,1).xy;bool front=M(rid,1).z>.5;vec3 base=vec3(.56,.58,.56);if(front&&s.x>.08&&s.x<.92&&s.y>.15&&s.y<.87){vec2 q=(s-vec2(.5,.51))*vec2(1.7,1.);float rr=length(q);if(rr<.34){float blades=.5+.5*cos(atan(q.y,q.x)*7.+rr*12.);base=vec3(.08)+vec3(.12)*blades;if(rr<.09)base=vec3(.29);}if(fract(s.y*28.)<.19)base*=.49;}c=brdf(base,n,v,.57,.1,1.,world,direct);}
+    }else if(kind==5){vec2 s=uv/M(rid,1).xy;bool front=M(rid,1).z>.5;float ratio=1.7; if(s.x>=3.99){float z=s.x>=5.99?.25:.20;s.x-=s.x>=5.99?6.:4.;ratio=M(rid,1).x/(M(rid,1).y*(1.-z));}vec3 base=s.x<-.99?vec3(.16,.18,.19):vec3(.56,.58,.56);if(front&&s.x>.08&&s.x<.92&&s.y>.15&&s.y<.87){vec2 q=(s-vec2(.5,.51))*vec2(ratio,1.);float rr=length(q);if(rr<.34){float blades=.5+.5*cos(atan(q.y,q.x)*7.+rr*12.);base=vec3(.08)+vec3(.12)*blades;if(rr<.09)base=vec3(.29);}if(fract(s.y*28.)<.19)base*=.49;}c=brdf(base,n,v,.57,.1,1.,world,direct);}
     else if(kind==6||kind==7){vec2 span=M(rid,1).xy;vec4 rect=kind==6?vec4(span.x*.19,max(.08,span.y-.70),span.x*.81,span.y-.12):vec4(max(.08,(span.x-1.)*.5),.04,min(span.x-.08,(span.x+1.)*.5),min(span.y-.10,1.95));
         if(phContains(uv,rect))c=phWindow(uv,rect,rect,.65,kind==6?1:4,a.w,1.,rid,world,t,b,n,v,direct);
         else c=phSurface(rid,uv,world,n,t,b,v,direct);

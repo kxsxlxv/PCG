@@ -25,3 +25,23 @@ review; if tests, artifact access or the session are blocked, report the exact
 blocker and NOT ACCEPTED. Do not invent a successful run or visual inspection.
 Do not start the next stage or merge research PR #23 into main merely because
 CI passed. No force pushes, disabled checks, or micro-commits to evade the gate.
+
+### Full-cycle acceptance rule (user reaffirmed 2026-11-27)
+
+Treat each numbered research stage as one complete delivery, not as lettered
+sub-stages or separate design/implementation/test replies. Perform substantial
+design and implementation, local correctness tests and actual local visual QA
+before publishing one coherent commit whenever possible. Do not hand off routine
+CI monitoring: remain in the same active working session, use bounded pauses and
+poll the exact commit's run until terminal status while tools permit. CI in
+progress is not a completed stage. Download the actual artifact, verify its
+digest and manifests, inspect previous and current actual rendered images, then
+document quantitative results, remaining defects and acceptance in the PR and
+final report. A failed CI is not a successful stage; investigate and correct
+within the same stage, document any necessary extra commit or rerun, and never
+force-push, bypass a gate or disable tests. Only a genuine tool/session limit,
+unavailable input, failed test that cannot be corrected, or another material
+blocker warrants an incomplete handoff; report that specifically and mark the
+stage NOT ACCEPTED. Do not promise asynchronous work or substitute a timer for
+actual CI status. Keep private reference textures and derived private renders
+outside the public repository and public CI unless redistribution is verified.
