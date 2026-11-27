@@ -8,8 +8,10 @@ float phNoise(vec2 p,float seed){
 #ifdef PCG_NATURAL
 // PCG_NATURAL_INCLUDE
 #define phMaterial n28Material
+#define phMaterialTint n28MaterialTint
 #else
 #define phMaterial mat
+#define phMaterialTint matTint
 #endif
 bool phContains(vec2 s,vec4 r){return all(greaterThanEqual(s,r.xy))&&all(lessThan(s,r.zw));}
 vec2 phWeights(float nv,float f0,float trans){
@@ -123,6 +125,11 @@ vec3 phEntry(vec2 q,vec2 size,int id,int role,vec3 p,vec3 t,vec3 up,vec3 n,vec3 
         if(variant==2&&q.y>.14&&q.y<.84&&abs(q.x-.50)<.016)a*=.53;
         if(abs(q.y-.52)<.013&&abs(q.x-.50)<.16)a=vec3(.07,.08,.08);
     }
+    if(M(id,13).w>.5&&int(M(id,7).z)==8&&role==4){
+        // Sectional service door: metal panels in the planned aperture.
+        float rib=min(fract(m.y/.38),1.-fract(m.y/.38));
+        a=vec3(.31,.33,.32)*mix(.53,1.,smoothstep(.025,.065,rib));
+    }
     if(edge<.5)a=mix(base*.52,M(id,9).xyz*.65,.35);
     float hx=variant==1?.23:.77;bool handle=abs(q.x-hx)<.026&&abs(q.y-.47)<.062;
     if(handle)return brdf(vec3(.42,.41,.35),n,v,.32,.70,1.,p,direct);
@@ -132,6 +139,10 @@ vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,f
     vec2 size=rect.zw-rect.xy,q=(s-rect.xy)/size;vec2 ratio=clamp(vec2(dot(v,t),dot(v,up))/max(dot(v,n),.10),-5.,5.);
     if(role==4||role==6)return phEntry(q,size,id,role,p,t,up,n,v,direct);
     int typ=int(M(id,8).y);int semantic=role==3?2:int(M(id,8).x)==2?1:0;int layout0=int(M(id,7).x)%4;
+    if(M(id,13).w>.5){
+        float k=floor((s.x-M(id,2).x)/max(M(id,2).y,.01)+.5);
+        layout0=(layout0+int(mod(floor(max(k,0.)/M(id,13).w),2.)))%4;
+    }
     bool door=role==2;int steps=pixelsPerMeter*max(size.x,size.y)>55.?20:pixelsPerMeter*max(size.x,size.y)>20.?8:0;
     vec4 hit=windowPOM(q,ratio,size,layout0,door,steps);int part=int(hit.w+.5);
     vec2 m=hit.xy*size;vec3 frame=M(id,9).xyz;float e=min(min(m.x,size.x-m.x),min(m.y,size.y-m.y));
@@ -206,12 +217,33 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
     if(style==6&&mod(float(bay),4.)==3.)tint*=.83;
     if(style==7&&floorZ>dims.z-.08&&floorZ<dims.z+dims.w+.08)tint*=.60;
     if(style==9&&min(floorZ,c.z-floorZ)<.045)tint*=1.13;
+    float period=M(id,13).w;vec3 accent=vec3(1.);
+    if(period>.5){
+        // Reference section rhythm affects opaque spandrels only: this branch
+        // is after exact aperture evaluation. No seam is added across glass.
+        float refStyle=M(id,7).z,phase=mod(max(float(bay),0.),period);
+        float section=floor(max(float(bay),0.)/period);
+        tint*=.95+.10*phHash(section*19.+key);
+        if(refStyle<=5.){
+            // Building-wide paint palette, selected once from the section rule.
+            // RGB multiplies linear base color before BRDF, not glass or lighting.
+            vec3 paint=clamp(.24+1.60*M(id,11).xyz,vec3(.22),vec3(.98));
+            if(s.y<c.z*M(id,7).y&&s.y>.48)accent=paint;
+            if(bays>0&&valid&&abs(phase-floor(period*.5))<.1)accent=mix(accent,paint,refStyle==2.?.55:.88);
+            if((refStyle==3.||refStyle==5.)&&s.y>(float(floors)-1.)*c.z)accent=mix(accent,paint,.72);
+            if(refStyle==4.&&floorId%4==0&&floorZ<.30)accent=mix(accent,paint,.65);
+            if(M(id,7).w>.5)accent=mix(accent,paint,refStyle==5.?.88:.35);
+        }else if(s.y<c.z*M(id,7).y&&s.y>.48)tint*=.77;
+        if(refStyle==7.&&bays>0&&valid){float piers=abs(fract((s.x-c.x)/max(c.y,.01))-.5)*c.y;
+            if(clearance>.05&&piers<.16)tint*=1.24;}
+        if(M(id,7).w>.5)tint*=.84;
+    }
     if(s.y<(style==8?.22:.46)){layer=35;uv0=vec2(s.x,-s.y)/1.6;tint*=.78;}
     else if(style==8&&floorZ>.14&&floorZ<c.z-.13){
         // Opaque curtain-wall spandrels, not additional transparent windows.
         vec3 panel=vec3(.105,.155,.185)*tint;return brdf(panel,n,v,.31,.27,1.,p,direct)+phReflect(n,v,.32)*.055;
     }
-    return phMaterial(layer,uv0,p,n,t,-up,v,direct,tint);
+    return phMaterialTint(layer,uv0,p,n,t,-up,v,direct,tint*accent);
 }
 vec3 phSurface(int id,vec2 s,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct){
     vec4 a=M(id,0),prop=M(id,8),q=M(id,12);int role=int(q.z),layer=int(a.y);

@@ -7,7 +7,6 @@ import numpy as np
 from PIL import Image,ImageDraw
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE","1")
 os.environ.setdefault("EGL_PLATFORM","surfaceless")
-import moderngl
 from pcg.far_emission import srgb_decode,srgb_encode
 from pcg._material_patterns import noise
 from compile_zero_geometry_tile import lookup,z_up
@@ -79,6 +78,7 @@ def module_library(n=256):
     return np.array(colors),np.array(nhs),np.array(masks)
 
 def main(detail_candidate=False):
+    import moderngl
     global OUT
     if detail_candidate:OUT=Path("artifacts/zero-detail")
     OUT.mkdir(parents=True,exist_ok=True)

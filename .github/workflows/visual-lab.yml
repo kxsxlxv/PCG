@@ -171,6 +171,12 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/zero_reference_equipment.py --overlay artifacts/zero-reference-pbr --out artifacts/zero-reference-equipment
+      - name: Reference-informed section grammar on matched synthetic footprints
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --out artifacts/zero-reference-grammar
       - name: Package replay source for private offline inputs
         run: git archive --format=zip -o /tmp/pcg-stage29-replay.zip HEAD lab src assets/third_party
       - uses: actions/upload-artifact@v4

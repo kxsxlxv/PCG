@@ -8,7 +8,6 @@ import base64,io,json,math,struct,hashlib
 import numpy as np
 from PIL import Image,ImageDraw
 import trimesh
-import moderngl
 from render_zero_facade_glsl import raw_mesh
 from compile_zero_geometry_tile import y_up,z_up
 import zero_facade_architecture as arch
@@ -239,6 +238,7 @@ else color=vec4(tint,1.);}
 
 class Lab:
     def __init__(self):
+        import moderngl
         self.ctx=moderngl.create_context(standalone=True,backend="egl",require=330)
         assert any(x in self.ctx.info["GL_RENDERER"].lower() for x in ("llvmpipe","softpipe","swrast","software"))
         self.p=self.ctx.program(vertex_shader=VERT,fragment_shader=FRAG)
@@ -254,6 +254,7 @@ class Lab:
         q=self.ctx.vertex_array(self.p,[(a,"3f 2f","p","uv")],index_buffer=b)
         return a,b,q
     def texture(self,levels,anisotropy=1.):
+        import moderngl
         n=len(levels[0]);t=self.ctx.texture((n,n),4,levels[0].tobytes())
         t.build_mipmaps(0,len(levels)-1)
         for i,a in enumerate(levels):t.write(a.tobytes(),level=i)
@@ -261,6 +262,7 @@ class Lab:
         t.repeat_x=True;t.repeat_y=False;t.anisotropy=anisotropy
         return t
     def render(self,objects,center,ppm,view):
+        import moderngl
         self.fbo.use();self.fbo.clear(.86,.89,.91,1.,depth=1.)
         v=np.asarray(view,float);v/=np.linalg.norm(v)
         r=np.cross([0,0,1],v);r/=np.linalg.norm(r);u=np.cross(v,r)

@@ -38,7 +38,7 @@ vec3 n28Reflect(vec3 n,vec3 v,float rough){
     return c*vec3(.95,.99,1.02)*(night>.5?.072:1.);
 }
 uniform int externalPbrLayers;
-vec3 n28Material(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct,float tint){
+vec3 n28MaterialTint(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct,vec3 tint){
     float key=M(rid,8).w;vec3 a=texture(albedoMaps,vec3(q,float(layer))).rgb;
     vec3 orm=texture(ormMaps,vec3(q,float(layer))).rgb;
     vec3 tn=vec3(0,0,1);bool detailed=pixelsPerMeter>8.;
@@ -66,6 +66,7 @@ vec3 n28Material(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direc
     tn.xy*=.65;vec3 nn=normalize(t*tn.x+b*tn.y+n*max(.1,tn.z));
     return brdf(a*tint,nn,v,orm.g,orm.b,orm.r,p,direct);
 }
+vec3 n28Material(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct,float tint){return n28MaterialTint(layer,q,p,n,t,b,v,direct,vec3(tint));}
 // Existing ray/AABB helper, defined by the parent shader below this include.
 void phBox(vec3 p,vec3 d,vec3 lo,vec3 hi,vec3 albedo,inout float best,inout vec3 c);
 void n28Desk(vec3 p,vec3 d,float x,float X,float z,float Z,float key,inout float best,inout vec3 c){

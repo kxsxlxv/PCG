@@ -120,12 +120,14 @@ class Detail:
         return sum(len(t) for _,_,t in self.geometry)+sum(2*(len(p) if closed else len(p)-1) for _,p,_,closed in self.cuts)+2*(self.antenna is not None)
 
 
-def plan(record,pipe_fn):
-    f,v=restore(record);a=v.archetype;poly=f.polygon();planes=roof_planes(v.mass);h=v.eave_m
+def plan(record,pipe_fn,prepared=None,reference=None):
+    f,v=prepared if prepared is not None else restore(record);a=v.archetype;poly=f.polygon();planes=roof_planes(v.mass);h=v.eave_m
     shell_n=len(v.mass.shell.triangles());mods=[];rejected=[];occup=[];pairs={};actual={};checks=0
     extension_drop=0.
     walls=v.plan.facades
     for w in walls:actual[w.id]={o.id:(o.u,o.z,o.u+o.width,o.z+o.height) for o in w.openings}
+    if reference is not None:
+        for e in reference.entries:actual[e.facade][e.id]=e.rect
     def env(w,u,U,d,D):
         return Polygon([w.point(x,0,-y)[:2] for x,y in ((u,d),(U,d),(U,D),(u,D))])
     def clash(p,z,Z,skip=None):
@@ -195,6 +197,21 @@ def plan(record,pipe_fn):
             parts.append(('stage21_cap','bitumen_roof',wall_box(w,u,U,0,BALCONY_DEPTH,cap,top)))
         else:m.cuts.append(('balcony',path,.95,False))
         assert accept(m,p,z-.155,top,outside=True),'canonical balcony cannot be removed'
+    # Reference grammar: projected window bays are full-height attachments,
+    # not internal loggias. Their front reuses the host opening record in the
+    # research renderer. No host opening or shell vertex is removed.
+    if reference is not None:
+        bywall={w.id:w for w in walls}
+        for q in reference.projections:
+            w=bywall[q.facade];p=env(w,q.u,q.U,0,q.depth)
+            if p.intersection(poly).area>EPS or clash(p,q.z,q.Z):
+                rejected.append((q.id,'projection_clearance'));continue
+            tris=wall_box(w,q.u,q.U,0,q.depth,q.z,q.Z)
+            n=np.cross(tris[:,1]-tris[:,0],tris[:,2]-tris[:,0]);n/=np.linalg.norm(n,axis=1)[:,None]
+            outward=np.r_[w.outward,0.];front=n@outward>.99;back=n@outward<-.99
+            assert front.sum()==2 and back.sum()==2
+            parts=[('ref_projection_front',a.wall,tris[front]),('ref_projection_side',a.wall,tris[~(front|back)])]
+            accept(Detail(q.id,'ref_projection',parts,primary=True),p,q.z,q.Z,outside=True)
     # Validate widened apertures against all other openings; sidecar is bounded
     # by its original regular-cell lookup interval (no overlapping slot search).
     for w in walls:
@@ -251,6 +268,16 @@ def plan(record,pipe_fn):
     t=np.array(max(walls,key=lambda w:w.length).end)-max(walls,key=lambda w:w.length).start;t/=np.linalg.norm(t);n=np.array([t[1],-t[0]])
     bx,by0,BX,BY=poly.bounds
     centers=[(bx+(BX-bx)*x,by0+(BY-by0)*y) for x in (.25,.5,.75,.36,.64) for y in (.25,.5,.75,.36,.64)]
+    if reference is not None and v.mass.actual_roof=='flat':
+        bywall={w.id:w for w in walls}
+        for q in reference.roof_cores:
+            w=bywall[q.facade];t0=(np.asarray(w.end)-w.start)/w.length;n0=np.asarray(w.outward)
+            p=np.asarray(w.point(q.u,0,q.depth)[:2]);W,D=2.55,1.85
+            area=Polygon([p+x*t0*W/2+y*n0*D/2 for x,y in ((-1,-1),(1,-1),(1,1),(-1,1))])
+            if not poly.buffer(-.35).covers(area) or clash(area,h,h+1.55):
+                rejected.append((q.id,'roof_core_clearance'));continue
+            body=box_mesh(p,t0,n0,W,D,1.45,h);cap=box_mesh(p,t0,n0,W,D,.10,h+1.45)
+            accept(Detail(q.id,'ref_roof_core',[('ref_roof_core',a.wall,body),('ref_roof_cap','bitumen_roof',cap)],primary=True),area,h,h+1.55)
     def equipment(kind,w,d,height,family):
         for x,y in sorted(centers,key=lambda q:stable('roof-place-v1',f.building_id,kind,*q)):
             p=np.array([x,y]);foot=Polygon([p+i*t*w/2+j*n*d/2 for i,j in ((-1,-1),(1,-1),(1,1),(-1,1))]);flash=foot.buffer(.10,join_style=2)
@@ -320,12 +347,13 @@ def plan(record,pipe_fn):
     for w in walls:
         if w.party or w.courtyard:continue
         door=next((o for o in w.openings if o.role=='door'),None)
-        if door:
-            u=door.u;U=u+door.width;z=door.z+door.height
+        entries=[('',(door.u,door.z,door.u+door.width,door.z+door.height))] if door else []
+        if reference is not None:entries.extend((f':section:{e.bay}',e.rect) for e in reference.entries if e.facade==w.id)
+        for suffix,(u,bottom,U,z) in entries:
             # The landing ends exactly at the source threshold; canopy clears all openings.
-            wall_add(w,'landing','landing',u-.15,U+.15,0,.70,0,door.z,'stone_plinth',True)
+            wall_add(w,'landing'+suffix,'landing',u-.15,U+.15,0,.70,0,bottom,'stone_plinth',True)
             for zz in (z+.12,z+.22):
-                if wall_add(w,'canopy','canopy',u-.30,U+.30,0,.85,zz,zz+.12,'painted_trim',True):break
+                if wall_add(w,'canopy'+suffix,'canopy',u-.30,U+.30,0,.85,zz,zz+.12,'painted_trim',True):break
         if a.use=='apartments' and w.length>10:
             for o in w.openings:
                 if o.role=='window' and o.floor>0 and stable('ac-v1',o.id)%11==0:
