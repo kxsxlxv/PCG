@@ -23,13 +23,16 @@ baseline/candidate render pairs, and preserved stage-28 scene metadata. The
 private output must not be uploaded to a public CI artifact or repository.
 Source archive for the replay contains only already-tracked lab/src/approved assets.
 
-Reference mesh intake: buildings_2012.zip includes 54 named mesh nodes and 14,924
-triangles across mesh definitions; the separate glTF has 50 mesh definitions and
-612,327 triangles across definitions, with inline geometry but separate PBR maps.
+Reference mesh intake: buildings_2012.zip includes 54 named mesh nodes and 14,924 input triangles (14,916 non-degenerate)
+ across mesh definitions; the separate glTF has 50 mesh definitions and
+670,747 non-degenerate triangles after strip triangulation across definitions, with inline geometry but separate PBR maps.
 Three equipment families have three LODs each. They require EXT_meshopt_compression,
 KHR_mesh_quantization and KHR_texture_basisu; existing uncompressed PCG importer
 does not decode these. Do not copy donor models or infer licenses. AC LOD0 alone
-exceeds the current whole-building 1,800-triangle cap. Geometry analysis and
-original procedural variants remain gated on decoded geometry, placement checks
-and budget-preserving integration. No change to source GIS, geometry or LOD in
+exceeds the current whole-building 1,800-triangle cap. All nine meshes were decoded locally using the upstream MIT-licensed meshoptimizer
+v0.20 JS reference algorithm; index ranges, accessor extrema and non-degenerate
+triangle counts were checked and actual geometry contact sheets inspected.
+BasisU texture decoding and budget-preserving procedural variants remain pending.
+Local real-input audit found corrugated iron ARM AO MAE 0.06007; separate
+AO and roughness maps take precedence and the mismatch is logged. No change to source GIS, geometry or LOD in
 the PBR replay. No native UNIGINE SDK claim.

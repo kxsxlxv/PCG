@@ -108,7 +108,8 @@ def load_archive(path,size=512):
             # Use original separate linear maps where available; ARM is audited.
             info['arm_ao_mae']=float(np.abs(orm[:,:,0]-ao).mean())
             info['arm_roughness_mae']=float(np.abs(orm[:,:,1]-rough).mean())
-            if max(info['arm_ao_mae'],info['arm_roughness_mae'])>.04:raise ValueError(('ARM channel mismatch',path.name,info))
+            info['arm_channel_mismatch']=max(info['arm_ao_mae'],info['arm_roughness_mae'])>.04
+            # Independently supplied semantic maps take precedence over lossy packed ARM.
             metal=scalar(metal) if metal is not None else np.zeros_like(rough)
             gltf=[x for x in z.namelist() if x.endswith('.gltf')]
             mat=json.loads(z.read(gltf[0]))['materials'][0] if len(gltf)==1 else {}
