@@ -144,9 +144,13 @@ vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,f
         layout0=(layout0+int(mod(floor(max(k,0.)/M(id,13).w),2.)))%4;
     }
     if(M(id,7).w>=2.&&role==1&&phHash(key+31.)>.76)layout0=(layout0+1)%4;
+    bool quality=M(id,7).w>=4.&&M(id,8).x<1.5&&(role==1||role==2);
+    float retrofit=phHash(key+61.);if(quality&&retrofit>.78)layout0=(layout0+2)%4;
     bool door=role==2;int steps=pixelsPerMeter*max(size.x,size.y)>55.?20:pixelsPerMeter*max(size.x,size.y)>20.?8:0;
     vec4 hit=windowPOM(q,ratio,size,layout0,door,steps);int part=int(hit.w+.5);
-    vec2 m=hit.xy*size;vec3 frame=M(id,9).xyz;float e=min(min(m.x,size.x-m.x),min(m.y,size.y-m.y));
+    vec2 m=hit.xy*size;vec3 frame=M(id,9).xyz;
+    if(quality){if(retrofit>.78)frame=mix(frame,vec3(.69,.70,.67),.74);else if(retrofit<.14)frame=mix(frame,vec3(.22,.15,.105),.62);}
+    float e=min(min(m.x,size.x-m.x),min(m.y,size.y-m.y));
     if(role==3){ // glazed double entrance leaves, transom and push bars
         part=e<.065||abs(q.x-.5)*size.x<.045||abs(q.y-.81)*size.y<.033?2:3;
         if(abs(q.y-.45)*size.y<.018&&abs(q.x-.5)>.085&&abs(q.x-.5)<.38)part=4;
@@ -154,7 +158,17 @@ vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,f
     }
     if(part==3){
         vec2 opening=roomRect.zw-roomRect.xy;vec2 rq=(rect.xy+hit.xy*size-roomRect.xy)/opening;
-        vec3 c=phInterior(clamp(rq,0.,1.),ratio,opening,roomSill,key,semantic);c=phRoomLight(c,state,semantic);
+        vec3 c=phInterior(clamp(rq,0.,1.),ratio,opening,roomSill,key,semantic);
+        // Curtains stay behind glass and inside the aperture, never replace frame.
+        if(quality){
+            float k=phHash(key+97.);float mode=k<.43?0.:k<.70?1.:k<.87?2.:3.;
+            float aa=clamp(.65/max(pixelsPerMeter*opening.x,1.),.006,.055);
+            float mask=q32Curtain(clamp(rq,0.,1.),mode,aa);
+            float pleat=.86+.14*cos(rq.x*opening.x*77.);
+            vec3 linen=mix(vec3(.33,.31,.26),vec3(.47,.44,.38),phHash(key+121.));
+            c=mix(c,linen*pleat,.80*mask);
+        }
+        c=phRoomLight(c,state,semantic);
         float dirty=M(id,8).z*exp(-m.y/.17);return phGlass(c,n,v,typ,M(id,9).w+dirty*.07,dirty);
     }
     vec3 a=part==1?frame*.63:part==4?vec3(.37,.40,.40):part==5?frame*.75:frame;
@@ -248,6 +262,11 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
             tint*=1.+(.16*phHash(section*57.+key)-.08)*mask;
         }
     }
+    if(M(id,7).w>=4.&&valid&&data.x==1.&&data.y==0.&&M(id,8).x<1.5){
+        float aa=clamp(.40/max(pixelsPerMeter,1.),.004,.026);
+        float sill=q32Sill(s,rect,aa);
+        if(sill>0.){float edge=clamp((s.y-(rect.y-.080))/.072,0.,1.);vec3 stone=mix(vec3(.21,.22,.21),vec3(.51,.49,.44),edge);return brdf(stone*tint,n,v,.68,0.,.86,p,direct);}
+    }
     if(s.y<(style==8?.22:.46)){layer=35;uv0=vec2(s.x,-s.y)/1.6;tint*=.78;}
     else if(style==8&&floorZ>.14&&floorZ<c.z-.13){
         // Opaque curtain-wall spandrels, not additional transparent windows.
@@ -279,7 +298,29 @@ vec3 phSurface(int id,vec2 s,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct){
         if(abs(n.z)<.2&&fract(s.x/.45)<.04)col*=.75;
         return brdf(col*tint,n,v,k==1?.42:.68,k==1?.15:0.,1.,p,direct);
     }
-    if(role==4&&abs(n.z)<.2)return brdf(mix(M(id,11).xyz,vec3(.48,.46,.41),.50)*tint,n,v,.76,0.,1.,p,direct);
+    if(role==4&&abs(n.z)<.2){
+        vec3 slab=mix(M(id,11).xyz,vec3(.48,.46,.41),.50)*tint;
+        if(M(id,7).w>=4.){
+            float H=M(id,7).y;float aa=clamp(.45/max(pixelsPerMeter,1.),.004,.025);
+            float drip=q32Band(s,vec4(.015,.016,max(.016,M(id,7).x-.015),min(.051,H-.01)),aa);
+            slab*=1.-.33*drip;slab+=vec3(.035)*smoothstep(max(.0,H-.035),H,s.y);
+        }
+        return brdf(slab,n,v,.76,0.,1.,p,direct);
+    }
+    if(role>=13&&role<=15&&M(id,7).w>=4.){
+        vec2 span=M(id,7).xy;float aa=clamp(.45/max(pixelsPerMeter,1.),.004,.035);
+        float edge=smoothstep(span.y-.12,span.y-.075,s.y);
+        if(edge>.0)return brdf(mix(vec3(.24,.25,.24),vec3(.085,.095,.10),edge),n,v,.55,.18,1.,p,direct);
+        if(role!=13){
+            float panel=q32CorePanel(s,span,role==14?1.:0.,aa);
+            if(panel>.0){
+                float stripe=role==15?.47+.53*smoothstep(.15,.55,fract(s.y/.105)):1.;
+                vec3 metal=role==14?mix(vec3(.19,.23,.22),vec3(.32,.33,.31),phHash(a.w)):vec3(.14,.16,.17)*stripe;
+                vec3 wall=phMaterial(layer,st,p,n,t,-b,v,direct,tint);
+                return mix(wall,brdf(metal,n,v,.57,.22,.90,p,direct),panel);
+            }
+        }
+    }
     if(role==5&&layer==7)return brdf(mix(M(id,9).xyz,vec3(.55,.53,.47),.55)*tint,n,v,.68,0.,1.,p,direct);
     if(role==8)return brdf(mix(M(id,9).xyz,vec3(.27,.30,.30),.68)*tint,n,v,.47,.35,1.,p,direct);
     return phMaterial(layer,st,p,n,t,-b,v,direct,tint);

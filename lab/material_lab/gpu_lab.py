@@ -125,7 +125,7 @@ def fragment_source(photoreal=False,probe=False,natural=False,natural_probe=Fals
     if photoreal:
         marker='// PCG_PHOTOREAL_INCLUDE'
         assert base.count(marker)==1
-        base=base.replace(marker,(HERE/'photoreal27.glsl').read_text())
+        base=base.replace(marker,(HERE/'quality32.glsl').read_text()+'\n'+(HERE/'photoreal27.glsl').read_text())
         defines='#define PCG_PHOTOREAL 1\n'
     if natural:
         assert photoreal

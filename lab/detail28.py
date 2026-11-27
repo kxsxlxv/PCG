@@ -35,7 +35,7 @@ def conflict(a,b):
     return min(Z,H)-max(z,l)>EPS and p.intersection(q).area>EPS
 
 
-def plan(records,placements,scene,ops,meta,profiles,prior,*,require_added=True):
+def plan(records,placements,scene,ops,meta,profiles,prior,*,require_added=True,efficient=False):
     v,u,ids,table=scene;walls={r['facade_id']:r for r in table if r.get('role')=='wall'}
     # Actual source geometry, including the projected outline of each module.
     raw=defaultdict(list);by=defaultdict(list);obs=defaultdict(list)
@@ -55,7 +55,10 @@ def plan(records,placements,scene,ops,meta,profiles,prior,*,require_added=True):
     budgets={bid:min(cap,16+16*sum(m['kind'] in ('balcony_open','balcony_glazed') for m in by[bid])) for bid,cap in caps.items()}
     assert sum(budgets.values())<=EXTRA_CAP
     eligible=sorted((b for b in caps if profiles[b]['archetype'] not in ('glass_grid','modern_ribbon','modern_gallery')),key=lambda b:stable('budget28',b))
-    while sum(budgets.values())+12<=EXTRA_CAP:
+    if efficient:
+        from pcg.quality_budget import entry_budget
+        budgets={bid:min(cap,entry_budget(old[bid]['near'],sum(m['kind']=='canopy' for m in by[bid]))) for bid,cap in caps.items()}
+    while not efficient and sum(budgets.values())+12<=EXTRA_CAP:
         slots=[b for b in eligible if budgets[b]+12<=caps[b]]
         if not slots:break
         for b in slots:
@@ -121,7 +124,7 @@ def plan(records,placements,scene,ops,meta,profiles,prior,*,require_added=True):
         for m in by[bid]:
             if m['kind'] not in ('balcony_open','balcony_glazed'):continue
             k,tail=m['anchor'].rsplit(':window:',1);floor,bay=map(int,tail.split(':'));stacks[k,bay].append(m)
-        for (k,bay),ms in sorted(stacks.items(),key=lambda x:stable('apron',bid,*x[0])):
+        for (k,bay),ms in ([] if efficient else sorted(stacks.items(),key=lambda x:stable('apron',bid,*x[0]))):
             seq=[]
             for m in ms:
                 slab=[v[ids==r['id']] for r in table if r.get('placement')==m['id'] and r.get('accessory')=='slab'];assert slab
@@ -136,7 +139,7 @@ def plan(records,placements,scene,ops,meta,profiles,prior,*,require_added=True):
             batch(seq)
         # Sills are near-only, grouped by whole bay. No per-window geometry
         # on office curtain walls, paired balcony blocks, party/courtyard walls.
-        if p['archetype'] not in ('glass_grid','modern_ribbon','modern_gallery'):
+        if not efficient and p['archetype'] not in ('glass_grid','modern_ribbon','modern_gallery'):
             cols=[]
             for k,(r,rows,bays,floors) in R.items():
                 if W[k]['party'] or W[k]['courtyard']:continue

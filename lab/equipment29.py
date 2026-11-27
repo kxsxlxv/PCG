@@ -99,16 +99,20 @@ def append(g,verts,normals,uv0,uv1,colors):
     for k,val in (('v',verts),('n',normals),('uv0',uv0),('uv1',uv1),('color',colors),('f',np.arange(start,start+num).reshape(-1,3))):
         g[k]=np.concatenate((g[k],np.asarray(val,dtype=g[k].dtype)))
 
-def build(source,out,records,placements,table,prior,*,require_all_variants=True):
+def build(source,out,records,placements,table,prior,*,require_all_variants=True,efficient=False):
     out.mkdir(parents=True,exist_ok=True)
     near=groups(source/'tile_opaque.glb');lite=groups(source/'tile_lite_opaque.glb');g=near['roof'];original=g;ids=rid(g);tri=g['v'][g['f']].astype(float);norm=normal(tri)
     by=defaultdict(list)
     for i,r in enumerate(table):
         if r.get('placement'):by[r['placement']].append(i)
     rec={r['footprint']['building_id']:r for r in records};stats={k:dict(near=v['near'],lite=v['lite']) for k,v in prior['per_building'].items()}
+    if efficient:
+        from pcg.quality_budget import equipment_ceiling
+        ceilings={bid:equipment_ceiling(q['near']) for bid,q in stats.items()}
+    else:ceilings={bid:CAP for bid in stats}
     lite_original={role:{k:v.copy() for k,v in q.items()} for role,q in lite.items()}
     keep=np.ones(len(ids),bool);adds=[];lite_add=[];lite_parts=[];rows=[]
-    targets=sorted((m for m in placements if m['kind'] in ('ac','vent')),key=lambda m:(m['building'],stable(m['id']),m['id']))
+    targets=sorted((m for m in placements if m['kind'] in ('ac','vent')),key=lambda m:(m['building'],int(efficient and m['kind']!='vent'),stable(m['id']),m['id']))
     for m in targets:
         bid=m['building'];allids=by[m['id']];mask=np.isin(ids,allids)
         replace_ids=[i for i in allids if table[i].get('accessory') in ('ac','vent','equipment_cap')];body=np.isin(ids,replace_ids)
@@ -116,7 +120,7 @@ def build(source,out,records,placements,table,prior,*,require_all_variants=True)
         basis,lo,hi=frame(rec[bid],m,tri[body]);extent=hi-lo;assert min(extent)>.05
         variant=stable(m['id'])%2;parts=recipe(m['kind'],variant,extent);simple=recipe(m['kind'],variant,extent,True)
         newcount=sum(len(p[2]) for p in parts);oldcount=int(body.sum());delta=newcount-oldcount
-        accept=stats[bid]['near']+delta<=CAP
+        accept=stats[bid]['near']+delta<=ceilings[bid]
         # Failed budget upgrades retain the same original shape at both LODs.
         retained=mask & ~body if accept else mask
         if retained.any():lite_add.append(select(g,retained))
@@ -158,7 +162,7 @@ def build(source,out,records,placements,table,prior,*,require_all_variants=True)
         g=lite['roof'];start=len(g['v'])
         for k in g:g[k]=np.concatenate((g[k],a[k]+start if k=='f' else a[k]))
     for a in lite_parts:append(lite['roof'],*a)
-    assert all(v['lite']<=v['near']<=CAP for v in stats.values())
+    assert all(v['lite']<=v['near']<=ceilings[bid] for bid,v in stats.items())
     assert len(rows)==len(targets) and all(v['lite_triangles']<=v['near_triangles'] for v in rows)
     if require_all_variants:assert len({r['variant'] for r in rows if r['accepted']})==4
     # Preserve the previous triangle streams for all unaffected Near and Lite faces.
@@ -174,5 +178,6 @@ def build(source,out,records,placements,table,prior,*,require_all_variants=True)
     updated=[dict(m,triangles=updates[m['id']]['near_triangles'],lite_triangles=updates[m['id']]['lite_triangles'],equipment_variant=updates[m['id']]['variant'] if updates[m['id']]['accepted'] else 'original') if m['id'] in updates else m for m in placements]
     (out/'placements.json').write_text(json.dumps(updated,sort_keys=True,indent=2)+'\n')
     report=dict(placements=rows,per_building=stats,variants=dict(Counter(r['variant'] for r in rows if r['accepted'])),accepted=sum(r['accepted'] for r in rows),total=len(rows),near_triangles=sum(v['near'] for v in stats.values()),lite_triangles=sum(v['lite'] for v in stats.values()),max_building_triangles=max(v['near'] for v in stats.values()),retained_lite_anchors=len(rows))
+    if efficient:report['ceilings']=ceilings
     (out/'equipment_report.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     return report

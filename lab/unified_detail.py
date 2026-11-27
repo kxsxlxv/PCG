@@ -120,7 +120,7 @@ class Detail:
         return sum(len(t) for _,_,t in self.geometry)+sum(2*(len(p) if closed else len(p)-1) for _,p,_,closed in self.cuts)+2*(self.antenna is not None)
 
 
-def plan(record,pipe_fn,prepared=None,reference=None):
+def plan(record,pipe_fn,prepared=None,reference=None,*,efficient=False):
     f,v=prepared if prepared is not None else restore(record);a=v.archetype;poly=f.polygon();planes=roof_planes(v.mass);h=v.eave_m
     shell_n=len(v.mass.shell.triangles());mods=[];rejected=[];occup=[];pairs={};actual={};checks=0
     extension_drop=0.
@@ -392,6 +392,45 @@ def plan(record,pipe_fn,prepared=None,reference=None):
                 if min(Z,r[3]+.025)>max(z,r[1]-.025):
                     spans=[q for u,U in spans for q in ((u,min(U,r[0]-.035)),(max(u,r[2]+.035),U)) if q[1]-q[0]>.12]
             for i,(u,U) in enumerate(spans):wall_add(w,kind+str(i),kind,u,U,0,d,z,Z,mat)
+    # Compact after placement, preserving the accepted collision envelopes.
+    compact_saved=0
+    if efficient:
+        assert reference is not None
+        bywall={w.id:w for w in walls}
+        core_by={q.id:q for q in reference.roof_cores}
+        def normals(t):
+            n=np.cross(t[:,1]-t[:,0],t[:,2]-t[:,0])
+            return n/np.linalg.norm(n,axis=1)[:,None]
+        for m in mods:
+            before=m.triangles
+            if m.anchor is not None and m.kind in ('balcony_open','balcony_glazed'):
+                w=bywall[m.anchor.rsplit(':window:',1)[0]]
+                N=np.r_[w.outward,0.]
+                parts=[]
+                for k,mat,t0 in m.geometry:
+                    if k in ('slab','stage21_cap'):
+                        back=normals(t0)@N<-.999
+                        assert back.sum()==2
+                        assert np.allclose((t0[back,:,:2]-w.start)@np.asarray(w.outward),0.,atol=1e-7)
+                        t0=t0[~back]
+                    parts.append((k,mat,t0))
+                m.geometry=parts
+            elif m.kind=='ref_roof_core':
+                w=bywall[core_by[m.id].facade]
+                (_,family,body),(_,roof_family,cap)=m.geometry
+                nb=normals(body);nc=normals(cap)
+                side=abs(nb[:,2])<.01;top=nc[:,2]>.999
+                assert side.sum()==8 and top.sum()==2
+                walls0=body[side].copy();ns=nb[side]
+                Z=body[:,:,2].max();H=cap[:,:,2].max()
+                walls0[:,:,2]=np.where(np.isclose(walls0[:,:,2],Z,atol=1e-8,rtol=0),H,walls0[:,:,2])
+                N=np.r_[w.outward,0.];T=np.array([N[1],-N[0],0.])
+                door=ns@N<-.999;vent=ns@T>.999 if stable('core-vent32',m.id)%2 else ns@T<-.999
+                assert door.sum()==2 and vent.sum()==2 and not np.any(door&vent)
+                m.geometry=[('ref_core_plain',family,walls0[~(door|vent)]),('ref_core_access',family,walls0[door]),('ref_core_louver',family,walls0[vent]),('ref_roof_cap',roof_family,cap[top])]
+                assert m.triangles==10
+            compact_saved+=before-m.triangles
+        assert compact_saved>=0
     assert len({m.id for m in mods})==len(mods)
     off=np.asarray(record['offset'],float)
     for m in mods:
@@ -401,4 +440,4 @@ def plan(record,pipe_fn,prepared=None,reference=None):
     assert {m.anchor for m in mods if m.anchor}=={o.id for _,_,o,*_ in balconies}
     total=shell_n+sum(m.triangles for m in mods);lite=shell_n+sum(m.triangles for m in mods if m.primary)
     assert 0<lite<=total<=min(CAP,v.max_triangles)
-    return dict(variant=v,footprint=f,modules=mods,pairs=pairs,rejected=rejected,checks=checks,near=total,lite=lite,shell=shell_n)
+    return dict(variant=v,footprint=f,modules=mods,pairs=pairs,rejected=rejected,checks=checks,near=total,lite=lite,shell=shell_n,compact_saved=compact_saved)

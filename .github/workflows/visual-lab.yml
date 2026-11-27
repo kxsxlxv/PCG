@@ -186,6 +186,15 @@ jobs:
           python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --volume --out artifacts/zero-volume-grammar
           python lab/volume_stress.py
           python lab/volume_review.py artifacts/zero-volume-grammar
+      - name: Quality per triangle on matched Stage 31 buildings
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: |
+          python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --efficient --out artifacts/zero-efficient-grammar
+          python lab/quality_stress32.py
+          python lab/volume_review.py artifacts/zero-efficient-grammar
       - name: Package replay source for private offline inputs
         run: git archive --format=zip -o /tmp/pcg-stage29-replay.zip HEAD lab src assets/third_party
       - uses: actions/upload-artifact@v4

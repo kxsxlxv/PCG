@@ -210,6 +210,7 @@ def accessory_code(r):
     if k in ('parapet','coping'):return 7
     if k in ('gutter_side','gutter_floor','bent_drain','flashing','flue'):return 8
     if k in ('stage28_entry_cap','stage28_balcony_edge','stage28_sill'):return {'stage28_entry_cap':10,'stage28_balcony_edge':11,'stage28_sill':12}[k]
+    if k in ('ref_core_plain','ref_core_access','ref_core_louver'):return {'ref_core_plain':13,'ref_core_access':14,'ref_core_louver':15}[k]
     return 6
 
 
