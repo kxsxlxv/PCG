@@ -3,7 +3,7 @@ Synthetic matched inputs only in CI. Private Stage-29 overlay is offline only.
 """
 from collections import Counter
 from dataclasses import asdict
-import argparse, hashlib, json, math, os, subprocess, sys
+import argparse, hashlib, json, math, os, subprocess, sys, tempfile, shutil
 from pathlib import Path
 import numpy as np
 from PIL import Image,ImageDraw
@@ -13,6 +13,9 @@ from pcg.archetypes import stable
 import compile_zero_geometry_tile as tile
 from compile_zero_tiles import pack_table,LAYERS,new_float32_audit
 import unified_detail as detail
+import detail28
+import equipment29
+import zero_combined_lod as combined
 import zero_unified_architecture as uni
 from zero_roof_construction import swept_pipe
 from zero_window_entrance_stage import retain
@@ -59,7 +62,7 @@ def compile_case(specs,candidate,out,decoder):
     for s in sorted(specs,key=lambda x:x['id']):
         f=s['footprint'];bid=f.building_id;name=s['rule'];kw=dict(roof=s['roof'],eave=s['eave'],party_edges=s['party'])
         b=baseline(f,RULES[name],s['floors'],s['top'],**kw)
-        v,ref=build(f,name,s['floors'],s['top'],**kw) if candidate else (b,None)
+        v,ref=build(f,name,s['floors'],s['top'],volume=candidate=='volume',**kw) if candidate else (b,None)
         assert v.mass.shell==b.mass.shell and v.plan.footprint_digest==b.plan.footprint_digest==f.digest()
         assert v.top_m==s['top'] and v.eave_m==s['eave'] and v.mass.actual_roof==s['roof']
         assert tuple(v.plan.floor_levels)==tuple(b.plan.floor_levels)
@@ -70,7 +73,7 @@ def compile_case(specs,candidate,out,decoder):
         cases.append(c)
         # Replan the same input independently and compare every semantic intent.
         if ref:
-            vv,rr=build(f,name,s['floors'],s['top'],**kw);assert vv.plan.digest()==v.plan.digest() and rr==ref
+            vv,rr=build(f,name,s['floors'],s['top'],volume=candidate=='volume',**kw);assert vv.plan.digest()==v.plan.digest() and rr==ref
         assert all(not w.openings for w in v.plan.facades if w.party)
     groups,table,cells,hosts=tile.compile_scene(cases,audit_samples=768)
     # Exact canonical host vertices and records are deterministic under input reorder.
@@ -122,6 +125,46 @@ def compile_case(specs,candidate,out,decoder):
             palette=((.63,.37,.28),(.36,.48,.60),(.48,.53,.33),(.55,.38,.31),(.49,.53,.57))
             profiles[bid]['panel']=list(palette[(list(RULES).index(ref.rule.id)+stable('ref-color',bid)%2)%len(palette)])
         if ref.rule.id=='service_hall':profiles[bid]['body']='panel_gray';profiles[bid]['roof']='metal_graphite' if next(r for r in records if r['footprint']['building_id']==bid)['decision']['actual_roof']!='flat' else 'membrane_gray'
+    # Reuse the actual Stage 28 bounded geometry pass on new plans. It sees
+    # projected columns and all secondary entries as real obstacle geometry.
+    refinement_counts=Counter();refinement_checks={};equipment_report=None
+    if candidate=='volume':
+        prior={'buildings_detail':[dict(building=bid,near=q['near'],lite=q['lite']) for bid,q in plans.items()]}
+        mods,stats,refinement_checks=detail28.plan(records,placements,near,O,M,profiles,prior,require_added=False)
+        again,stats2,checks2=detail28.plan(list(reversed(records)),placements,near,O,M,profiles,prior,require_added=False)
+        assert stats==stats2 and refinement_checks==checks2 and len(mods)==len(again)
+        for x,y in zip(mods,again):
+            assert {k:v for k,v in x.items() if k!='geometry'}=={k:v for k,v in y.items() if k!='geometry'}
+            for (k,m,t),(K,N,T) in zip(x['geometry'],y['geometry']):
+                assert (k,m)==(K,N);np.testing.assert_array_equal(t,T)
+        old_M=M.copy();old_O=O.copy();old_count=len(table)
+        for m in mods:
+            bid=m['building'];v=plans[bid]['variant'];start=len(table)
+            c=dict(building_id=bid,offset=[0.,0.,0.],eave_m=v.eave_m,floors=len(v.plan.floor_levels)-1)
+            combined.append_compact(groups,table,c,m)
+            if not m['primary']:dead.update(range(start,len(table)))
+            pts=np.concatenate([q.reshape(-1,3) for _,_,q in m['geometry']])
+            placements.append(dict(**{k:v for k,v in m.items() if k!='geometry'},triangles=sum(len(q) for _,_,q in m['geometry']),bounds_world_local=[pts.min(0).tolist(),pts.max(0).tolist()],record_range=[start,len(table)]))
+            refinement_counts[m['kind']]+=1
+        for bid,q in plans.items():
+            q['near']=stats[bid]['near'];q['lite']=stats[bid]['lite']
+        counts.update(refinement_counts)
+        near,no=uni.scene_from(groups,table,out/'tile_opaque.glb',actual,owners)
+        litegroups,_=retain(groups,dead);lite,lo=uni.scene_from(litegroups,table,out/'tile_lite_opaque.glb',actual,owners)
+        assert near[3]==lite[3]
+        for bid,q in plans.items():
+            assert np.count_nonzero(no==bid)//3==q['near'] and np.count_nonzero(lo==bid)//3==q['lite']
+        # Existing record IDs/UVs and the canonical PCGF payload stay exact;
+        # new opaque records are appended before the cutout rows.
+        oldabi=(out/'facade_params.bin').read_bytes()
+        audit=new_float32_audit();samples=pack_table(table,cells,out/'facade_params.bin',audit)
+        assert (out/'facade_params.bin').read_bytes()[16:len(oldabi)]==oldabi[16:]
+        cpp=json.loads(subprocess.run([str(decoder),str(out/'facade_params.bin'),str(out/'facade_cells.bin'),str(len(LAYERS))],capture_output=True,text=True,check=True).stdout)
+        assert cpp['records']==len(table) and cpp['cells']==len(cells)
+        M,O,models,md=um.build(near,cells,pairs,styles)
+        for x in extra:
+            O[x['slot'],0]=x['rect'];O[x['slot'],2]=old_O[x['slot'],2]
+        np.testing.assert_array_equal(M[:old_count],old_M[:old_count]);np.testing.assert_array_equal(O,old_O)
     # Cutout rows are allocated per building and kind, same as stage 27.
     cut_pairs={(bid,k) for k,own in owners.items() for bid in set(own)}
     meta,remap=ap27.augment(M[:len(table)],table,profiles,cut_pairs)
@@ -133,13 +176,13 @@ def compile_case(specs,candidate,out,decoder):
         if r.get('role')!='wall' or r['building'] not in reference:continue
         ref=reference[r['building']];j=r['id'];style=list(RULES).index(ref.rule.id)+1
         if r['facade_id'] not in patterns:continue
-        p=patterns[r['facade_id']];meta[j,13,3]=p['section_bays'];meta[j,7,1:4]=[2. if style in (2,3) else 1.,style,0.]
+        p=patterns[r['facade_id']];meta[j,13,3]=p['section_bays'];meta[j,7,1:4]=[2. if style in (2,3) else 1.,style,2. if candidate=='volume' else 0.]
         if style==8:
             entry=int(meta[j,1,0]+meta[j,1,1]*meta[j,1,2]);
             if O[entry,2,0]:O[entry,2,0]=4
     lookup=uni.audit_gpu_lookup(table,M,O,pairs)
     for j,k in projection_hosts.items():
-        meta[j]=meta[k];meta[j,7,3]=1.
+        meta[j]=meta[k];meta[j,7,3]=3. if candidate=='volume' else 1.
         if table[j]['family']=='concrete_panel':meta[j,0,1:3]=ap27.LAYERS['panel_white' if stable(table[j]['building'])%2 else 'panel_warm']
         # A front must share the exact same aperture range and frame as its host.
         np.testing.assert_array_equal(meta[j,1:6],meta[k,1:6]);assert meta[j,0,0]==1
@@ -164,7 +207,33 @@ def compile_case(specs,candidate,out,decoder):
         per.append(dict(id=s['id'],building=bid,rule=s['rule'],near=q['near'],lite=q['lite'],host=host_counts[bid],floors=s['floors'],openings=sum(len(w.openings) for w in q['variant'].plan.facades),secondary_entries=len(ref.entries) if ref else 0,projection_intents=len(ref.projections) if ref else 0,projections=mod['ref_projection'],roof_core_intents=len(ref.roof_cores) if ref else 0,roof_cores=mod['ref_roof_core'],module_counts=dict(mod),rejected=q['rejected']))
     for name,value in [('plans.json',records),('parameters.json',table),('placements.json',placements),('section_entries.json',extra),('projected_front_aliases.json',{str(k):v for k,v in projection_hosts.items()}),('opening_blocks_v2.json',dict(paired_openings=pairs)),('reflection_proxies.json',proxyman),('cutout_records.json',[dict(building=bid,kind=k,id=j) for (bid,k),j in sorted(remap.items())])]:dump(out/name,value)
     np.savez_compressed(out/'gpu_metadata.npz',metadata=meta,openings=O,reflection_proxies=proxy,cutout_face_records=cut_faces)
+    if candidate=='volume':
+        # Reuse Stage 29's actual directional equipment meshes and UV tags.
+        # Read back the refined exported GLBs, not an analytical proxy.
+        prior={'per_building':{bid:dict(near=q['near'],lite=q['lite']) for bid,q in plans.items()}}
+        with tempfile.TemporaryDirectory() as tmp:
+            geom=Path(tmp)/'equipment'
+            equipment_report=equipment29.build(out,geom,records,placements,table,prior,require_all_variants=False)
+            rev=Path(tmp)/'reverse'
+            eq2=equipment29.build(out,rev,list(reversed(records)),list(reversed(placements)),table,prior,require_all_variants=False)
+            assert eq2==equipment_report
+            for name in ('tile_opaque.glb','tile_lite_opaque.glb'):
+                assert sha(geom/name)==sha(rev/name)
+                shutil.copyfile(geom/name,out/name)
+            for name in ('placements.json','equipment_report.json'):shutil.copyfile(geom/name,out/name)
+        bounds=prev.envelopes(records,placements)
+        def reload(name):
+            scene,owner,cuts,nv,count=prev.load_scene(out,name,table,bounds)
+            scene,face=prev.remap_scene(scene,cuts,remap,nv);np.testing.assert_array_equal(face,cut_faces)
+            return scene,owner,count
+        near,no,nn=reload('tile_opaque.glb');lite,lo,ll=reload('tile_lite_opaque.glb')
+        assert nn==equipment_report['near_triangles'] and ll==equipment_report['lite_triangles']
+        for row in per:
+            x=equipment_report['per_building'][row['building']]
+            row['near']=x['near'];row['lite']=x['lite']
+            assert np.count_nonzero(no==row['building'])//3==x['near'] and np.count_nonzero(lo==row['building'])//3==x['lite'] and 0<x['lite']<=x['near']<=1800
     report=dict(buildings=per,near_triangles=len(near[0])//3,lite_triangles=len(lite[0])//3,max_building_triangles=max(p['near'] for p in per),counts=dict(counts),metadata_rows=len(meta),opening_rows=len(O),shared_material_layers=36,footprints_and_heights_exact=True,canonical_host_deterministic=True,abi_samples=samples,cpp=cpp,gpu_lookup=lookup,placement_checks=checks,secondary_entries=len(extra),projected_fronts=len(projection_hosts),texture_limit=limit.value)
+    if candidate=='volume':report.update(refinement28=dict(refinement_counts),refinement28_checks=refinement_checks,equipment29=equipment_report)
     dump(out/'report.json',report)
     return dict(near=near,lite=lite,no=no,lo=lo,meta=meta,ops=O,proxy=proxy,report=report,records=records)
 
@@ -181,13 +250,14 @@ def load_materials(out,private):
                 else:arrays[k][i]=a
     return arrays,mips,info
 
-def run(out,decoder,private=None):
+def run(out,decoder,private=None,volume=False):
     out.mkdir(parents=True,exist_ok=True)
     manifest=json.loads((ROOT/'bundle.json').read_text())
     for k,h in manifest.items():assert sha(ROOT/k)==h,k
-    arrays,mips,info=load_materials(out,private);allrows=[];views=[];images=[];quant=None
+    arrays,mips,info=load_materials(out,private);allrows=[];views=[];images=[];quant=None;upgrades=[]
     for variant in (0,1):
-        specs=list(fixtures(variant));legacy=compile_case(specs,False,out/f'legacy_{variant}',decoder);cand=compile_case(specs,True,out/f'grammar_{variant}',decoder)
+        specs=list(fixtures(variant));legacy=compile_case(specs,True if volume else False,out/f'legacy_{variant}',decoder);cand=compile_case(specs,'volume' if volume else True,out/f'grammar_{variant}',decoder)
+        if volume:upgrades.append(dict(stage28=cand['report']['refinement28'],stage29=cand['report']['equipment29']))
         # Match exact host geometry for each case even when window/section metadata differs.
         for a,b in zip(legacy['records'],cand['records']):assert a['footprint']==b['footprint'] and a['decision']['top_m']==b['decision']['top_m'] and a['decision']['eave_m']==b['decision']['eave_m']
         for scene,directory in ((legacy,out/f'legacy_{variant}'),(cand,out/f'grammar_{variant}')):
@@ -205,14 +275,14 @@ def run(out,decoder,private=None):
         def draw(verts,center,ppm,view,mode,res):
             renderer.replace_vertices(verts);p=verts[:,:3];renderer.shadow_center=(p.min(0)+p.max(0))/2;renderer.shadow_extent=max(20.,float(np.linalg.norm(np.ptp(p,axis=0))*1.2))
             im,metrics=renderer.render(center,ppm,view,mode,res,info);return im,renderer.last_mask.copy(),metrics
-        res=(960,720);data=[]
+        res=(1280,960) if volume else (960,720);data=[]
         for scene in (legacy,cand):
             renderer.tex2(scene['meta'],0,'metadata',False);renderer.tex2(scene['ops'],1,'openings',False);renderer.tex2(scene['proxy'],9,'reflectionProxies',False)
             if private:renderer.uniform('externalPbrLayers',ext.AUTHORED_MASK)
             verts=gpu.vertex_data(scene['near']);lite=gpu.vertex_data(scene['lite']);rows={}
             for s in specs:
                 bid=s['footprint'].building_id;camera=(-1.,1.6,.8) if s['party'] else (1.,-1.6,.8);poly=np.asarray(s['footprint'].exterior);off=np.asarray(s['offset']);lo=np.r_[poly.min(0),0]+off;hi=np.r_[poly.max(0),s['top']]+off
-                center=(lo+hi)/2;box=np.array([[x,y,z] for x in (lo[0]-1,hi[0]+1) for y in (lo[1]-1,hi[1]+1) for z in (lo[2],hi[2]+2)])
+                center=(lo+hi)/2;pad=2.5 if volume else 1.;box=np.array([[x,y,z] for x in (lo[0]-pad,hi[0]+pad) for y in (lo[1]-pad,hi[1]+pad) for z in (lo[2],hi[2]+(3. if volume else 2.))])
                 d=gpu.norm(camera);right=gpu.norm(np.cross([0,0,1],d));up=np.cross(d,right);ppm=res[1]*.83/max(np.ptp(box@up),np.ptp(box@right)*res[1]/res[0])
                 a,mask,m=draw(verts[scene['no']==bid],center,ppm,camera,'day',res);a.save(out/(s['id']+('_legacy.png' if scene is legacy else '_grammar.png')))
                 if scene is cand:
@@ -229,13 +299,18 @@ def run(out,decoder,private=None):
     for part in range(2):
         rows=images[part*8:(part+1)*8];sheet=Image.new('RGB',(1260,len(rows)*286),(236,238,240));d=ImageDraw.Draw(sheet)
         for i,(key,a,b,c,n,m,l) in enumerate(rows):
-            for j,(im,label,count) in enumerate(((a,'legacy grammar',n),(b,'reference grammar',m),(c,'reference Lite',l))):
+            for j,(im,label,count) in enumerate(((a,'Stage 30' if volume else 'legacy grammar',n),(b,'Stage 31' if volume else 'reference grammar',m),(c,'Stage 31 Lite' if volume else 'reference Lite',l))):
                 im=im.copy();im.thumbnail((416,256));sheet.paste(im,(j*420+(420-im.width)//2,i*286));d.text((j*420+5,i*286+258),f'{key} | {label} | {count} tris',fill='black')
         sheet.save(out/f'comparison_{part}.png')
     report=dict(schema='pcg.research.reference-grammar.v1',source_kind='private_pbr' if private else 'original_shared_pbr',baseline_stage28_hashes=len(manifest),rules=len(RULES),buildings=len(allrows),cases=allrows,views=views,quantization=quant,near_max=max(r['grammar']['near'] for r in allrows),near_total=sum(r['grammar']['near'] for r in allrows),lite_total=sum(r['grammar']['lite'] for r in allrows),legacy_near_total=sum(r['legacy']['near'] for r in allrows),legacy_lite_total=sum(r['legacy']['lite'] for r in allrows),secondary_entries=sum(r['grammar']['secondary_entries'] for r in allrows),projected_columns=sum(r['grammar']['projections'] for r in allrows),roof_cores=sum(r['grammar']['roof_cores'] for r in allrows),limitations=['Authored generic rules from observed reference patterns; synthetic metric footprints, not exact donor geometry or verified building-series classification.','Same stage-26 detail planner and stage-29 material renderer used on both sides; no stage-28/29 equipment upgrade on these new fixtures.','Secondary entries and projected-front aliases require the research sidecar, not yet native ABI.','Projection fronts have shader openings, not full room/structural geometry.','No private textures in GitHub or native SDK/hardware benchmark.'])
     assert report['buildings']==16 and report['rules']==8 and report['near_max']<=1800 and report['secondary_entries']>0 and report['projected_columns']>0 and report['roof_cores']>0
+    if volume:
+        report['schema']='pcg.research.volume-grammar.v1';report['comparison']='stage30_vs_stage31';report['render_resolution']=[1280,960];report['refinements']=upgrades
+        report['limitations']=[x for x in report['limitations'] if 'no stage-28/29 equipment upgrade' not in x]
+        report['limitations'].append('Stage 28 and 29 actual geometry passes run on candidate only; the comparison includes their effects.')
+        report['limitations'].append('Authoritative GIS building parts and height stepbacks are not inferred. Outward volume attachments and roof equipment are optional; no canonical shell edit.')
     dump(out/'report.json',report);dump(out/'bundle.json',{str(p.relative_to(out)):sha(p) for p in sorted(out.rglob('*')) if p.is_file() and p.name!='bundle.json'})
-    print('STAGE30',json.dumps({k:v for k,v in report.items() if k not in ('cases','views')}),flush=True)
+    print('STAGE31' if volume else 'STAGE30',json.dumps({k:v for k,v in report.items() if k not in ('cases','views')}),flush=True)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('decoder',type=Path);p.add_argument('--out',type=Path,required=True);p.add_argument('--private-overlay',type=Path);a=p.parse_args();run(a.out,a.decoder,a.private_overlay)
+    p=argparse.ArgumentParser();p.add_argument('decoder',type=Path);p.add_argument('--out',type=Path,required=True);p.add_argument('--private-overlay',type=Path);p.add_argument('--volume',action='store_true');a=p.parse_args();run(a.out,a.decoder,a.private_overlay,a.volume)

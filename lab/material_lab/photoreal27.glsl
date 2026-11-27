@@ -143,6 +143,7 @@ vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,f
         float k=floor((s.x-M(id,2).x)/max(M(id,2).y,.01)+.5);
         layout0=(layout0+int(mod(floor(max(k,0.)/M(id,13).w),2.)))%4;
     }
+    if(M(id,7).w>=2.&&role==1&&phHash(key+31.)>.76)layout0=(layout0+1)%4;
     bool door=role==2;int steps=pixelsPerMeter*max(size.x,size.y)>55.?20:pixelsPerMeter*max(size.x,size.y)>20.?8:0;
     vec4 hit=windowPOM(q,ratio,size,layout0,door,steps);int part=int(hit.w+.5);
     vec2 m=hit.xy*size;vec3 frame=M(id,9).xyz;float e=min(min(m.x,size.x-m.x),min(m.y,size.y-m.y));
@@ -232,11 +233,20 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
             if(bays>0&&valid&&abs(phase-floor(period*.5))<.1)accent=mix(accent,paint,refStyle==2.?.55:.88);
             if((refStyle==3.||refStyle==5.)&&s.y>(float(floors)-1.)*c.z)accent=mix(accent,paint,.72);
             if(refStyle==4.&&floorId%4==0&&floorZ<.30)accent=mix(accent,paint,.65);
-            if(M(id,7).w>.5)accent=mix(accent,paint,refStyle==5.?.88:.35);
+            if(mod(M(id,7).w,2.)>.5)accent=mix(accent,paint,refStyle==5.?.88:.35);
         }else if(s.y<c.z*M(id,7).y&&s.y>.48)tint*=.77;
         if(refStyle==7.&&bays>0&&valid){float piers=abs(fract((s.x-c.x)/max(c.y,.01))-.5)*c.y;
             if(clearance>.05&&piers<.16)tint*=1.24;}
-        if(M(id,7).w>.5)tint*=.84;
+        if(mod(M(id,7).w,2.)>.5)tint*=.84;
+        if(M(id,7).w>=2.&&valid&&refStyle<=5.){
+            // Stable bounded repair patches only on opaque wall; no new textures.
+            float cell=phHash(key+float(bay)*37.13+float(floorId)*91.7);
+            float bx=abs((s.x-c.x)/max(c.y,.01)-float(bay));
+            float edge=min((.5-bx)*c.y,min(floorZ,c.z-floorZ));
+            float mask=smoothstep(.03,.12,edge)*smoothstep(.05,.13,clearance);
+            if(cell>.82){vec3 repair=vec3(.87,.91,.94)+.16*phHash(cell*117.+key);accent=mix(accent,accent*repair,.65*mask);}
+            tint*=1.+(.16*phHash(section*57.+key)-.08)*mask;
+        }
     }
     if(s.y<(style==8?.22:.46)){layer=35;uv0=vec2(s.x,-s.y)/1.6;tint*=.78;}
     else if(style==8&&floorZ>.14&&floorZ<c.z-.13){

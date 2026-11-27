@@ -209,6 +209,7 @@ def accessory_code(r):
     if k in ('plinth','belt','soffit','dormer_trim'):return 5
     if k in ('parapet','coping'):return 7
     if k in ('gutter_side','gutter_floor','bent_drain','flashing','flue'):return 8
+    if k in ('stage28_entry_cap','stage28_balcony_edge','stage28_sill'):return {'stage28_entry_cap':10,'stage28_balcony_edge':11,'stage28_sill':12}[k]
     return 6
 
 

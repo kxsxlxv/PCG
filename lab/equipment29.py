@@ -99,7 +99,7 @@ def append(g,verts,normals,uv0,uv1,colors):
     for k,val in (('v',verts),('n',normals),('uv0',uv0),('uv1',uv1),('color',colors),('f',np.arange(start,start+num).reshape(-1,3))):
         g[k]=np.concatenate((g[k],np.asarray(val,dtype=g[k].dtype)))
 
-def build(source,out,records,placements,table,prior):
+def build(source,out,records,placements,table,prior,*,require_all_variants=True):
     out.mkdir(parents=True,exist_ok=True)
     near=groups(source/'tile_opaque.glb');lite=groups(source/'tile_lite_opaque.glb');g=near['roof'];original=g;ids=rid(g);tri=g['v'][g['f']].astype(float);norm=normal(tri)
     by=defaultdict(list)
@@ -160,7 +160,7 @@ def build(source,out,records,placements,table,prior):
     for a in lite_parts:append(lite['roof'],*a)
     assert all(v['lite']<=v['near']<=CAP for v in stats.values())
     assert len(rows)==len(targets) and all(v['lite_triangles']<=v['near_triangles'] for v in rows)
-    assert len({r['variant'] for r in rows if r['accepted']})==4
+    if require_all_variants:assert len({r['variant'] for r in rows if r['accepted']})==4
     # Preserve the previous triangle streams for all unaffected Near and Lite faces.
     for k in ('v','n','uv0','uv1','color'):
         np.testing.assert_array_equal(original[k][original['f'][keep]],near['roof'][k][near['roof']['f'][:int(keep.sum())]])

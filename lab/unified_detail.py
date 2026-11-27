@@ -272,12 +272,12 @@ def plan(record,pipe_fn,prepared=None,reference=None):
         bywall={w.id:w for w in walls}
         for q in reference.roof_cores:
             w=bywall[q.facade];t0=(np.asarray(w.end)-w.start)/w.length;n0=np.asarray(w.outward)
-            p=np.asarray(w.point(q.u,0,q.depth)[:2]);W,D=2.55,1.85
+            p=np.asarray(w.point(q.u,0,q.depth)[:2]);W,D=getattr(q,'width_m',2.55),getattr(q,'length_m',1.85);H=getattr(q,'height_m',1.55)
             area=Polygon([p+x*t0*W/2+y*n0*D/2 for x,y in ((-1,-1),(1,-1),(1,1),(-1,1))])
-            if not poly.buffer(-.35).covers(area) or clash(area,h,h+1.55):
+            if not poly.buffer(-.35).covers(area) or clash(area,h,h+H):
                 rejected.append((q.id,'roof_core_clearance'));continue
-            body=box_mesh(p,t0,n0,W,D,1.45,h);cap=box_mesh(p,t0,n0,W,D,.10,h+1.45)
-            accept(Detail(q.id,'ref_roof_core',[('ref_roof_core',a.wall,body),('ref_roof_cap','bitumen_roof',cap)],primary=True),area,h,h+1.55)
+            body=box_mesh(p,t0,n0,W,D,H-.10,h);cap=box_mesh(p,t0,n0,W,D,.10,h+H-.10)
+            accept(Detail(q.id,'ref_roof_core',[('ref_roof_core',a.wall,body),('ref_roof_cap','bitumen_roof',cap)],primary=True),area,h,h+H)
     def equipment(kind,w,d,height,family):
         for x,y in sorted(centers,key=lambda q:stable('roof-place-v1',f.building_id,kind,*q)):
             p=np.array([x,y]);foot=Polygon([p+i*t*w/2+j*n*d/2 for i,j in ((-1,-1),(1,-1),(1,1),(-1,1))]);flash=foot.buffer(.10,join_style=2)

@@ -35,7 +35,7 @@ def conflict(a,b):
     return min(Z,H)-max(z,l)>EPS and p.intersection(q).area>EPS
 
 
-def plan(records,placements,scene,ops,meta,profiles,prior):
+def plan(records,placements,scene,ops,meta,profiles,prior,*,require_added=True):
     v,u,ids,table=scene;walls={r['facade_id']:r for r in table if r.get('role')=='wall'}
     # Actual source geometry, including the projected outline of each module.
     raw=defaultdict(list);by=defaultdict(list);obs=defaultdict(list)
@@ -105,7 +105,7 @@ def plan(records,placements,scene,ops,meta,profiles,prior):
         # All entries first. Sit on actual existing canopy top, never lift it.
         for m in by[bid]:
             if m['kind']!='canopy':continue
-            k=bid+':facade:'+m['id'].split(':unified:')[1].rsplit(':',1)[0];q=local_coords(np.concatenate(raw[m['id']]),F[k]);lo=q.min(0);hi=q.max(0);a,b=lo[0]+.025,hi[0]-.025;D=hi[1];Z=hi[2]
+            k=bid+':facade:'+':'.join(m['id'].split(':unified:',1)[1].split(':')[:2]);q=local_coords(np.concatenate(raw[m['id']]),F[k]);lo=q.min(0);hi=q.max(0);a,b=lo[0]+.025,hi[0]-.025;D=hi[1];Z=hi[2]
             if p['use']==0:
                 variant='sloped_hood';prof=[(.025,Z),(D-.015,Z),(D-.015,Z+.045),(.025,Z+.27)];mat='metal_roof_red'
             elif p['use']==2:
@@ -152,7 +152,7 @@ def plan(records,placements,scene,ops,meta,profiles,prior):
                 if seq:batch(seq)
         stats[bid]=dict(near=old[bid]['near']+n,lite=old[bid]['lite']+nl,added=n,lite_added=nl,counts=dict(kept))
         assert stats[bid]['near']<=CAP
-    assert len({m['id'] for m in result})==len(result) and 0<added<=EXTRA_CAP
+    assert len({m['id'] for m in result})==len(result) and (0<added if require_added else 0<=added) and added<=EXTRA_CAP
     for m in result:
         for _,_,t in m['geometry']:
             q=t.astype(np.float32).astype(float);assert np.all(np.linalg.norm(np.cross(q[:,1]-q[:,0],q[:,2]-q[:,0]),axis=1)>1e-9)

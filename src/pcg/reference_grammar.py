@@ -8,6 +8,8 @@ import math
 from .archetypes import plan_variant, stable
 from .architecture import plan_facades
 from ._grammar_bays import window_offsets
+from .volume_budget import Offer, select, detail_reserve
+from shapely.geometry import Polygon
 
 @dataclass(frozen=True)
 class Rule:
@@ -73,6 +75,20 @@ class SectionPlan:
     def canonical(self):return asdict(self)
 
 
+@dataclass(frozen=True)
+class RoofVolume(RoofCore):
+    width_m: float
+    length_m: float
+    height_m: float
+
+@dataclass(frozen=True)
+class VolumePlan(SectionPlan):
+    reserved_triangles: int
+    planned_triangles: int
+    accepted_offers: tuple[str,...]
+    volume_mode: bool=True
+
+
 def baseline(f,rule,floors,top,*,roof='flat',eave=None,party_edges=()):
     # The legacy selector counts 20 triangles per anchor; full glazed modules
     # can cost 30. Limit its aperture selection conservatively, then give the
@@ -82,7 +98,7 @@ def baseline(f,rule,floors,top,*,roof='flat',eave=None,party_edges=()):
     return replace(v,max_triangles=1800)
 
 
-def build(f,rule_id,floors,top,*,roof='flat',eave=None,party_edges=()):
+def build(f,rule_id,floors,top,*,roof='flat',eave=None,party_edges=(),volume=False):
     rule=RULES[rule_id];old=baseline(f,rule,floors,top,roof=roof,eave=eave,party_edges=party_edges)
     h=old.eave_m;fh=h/floors;party=set(party_edges)
     if fh<2.55:raise ValueError('reference grammar requires adequate resolved floor height')
@@ -98,13 +114,14 @@ def build(f,rule_id,floors,top,*,roof='flat',eave=None,party_edges=()):
     exterior=[(math.dist(x,y),i) for i,(x,y) in enumerate(zip(f.exterior,f.exterior[1:]+f.exterior[:1])) if (0,i) not in party]
     main=max(exterior,key=lambda q:(q[0],-q[1]))[1] if exterior else None
     longest=max((x[0] for x in exterior),default=1.)
-    slots={};entry_candidates=[];projs=[];cores=[];facades=[];columns=[]
+    slots={};entry_candidates=[];projs=[];cores=[];facades=[];columns=[];envelopes={};wall_frames={};host=f.polygon()
     for r,ring in enumerate(rings):
         for i,(x,y) in enumerate(zip(ring,ring[1:]+ring[:1])):
             if (r,i) in party:continue
             fid=f'{f.building_id}:facade:{r}:{i}';length=math.dist(x,y)
             centers=window_offsets(length,profile.window_width,profile.spacing,profile.margin)
             count=len(centers);long=r==0 and length>=max(8.,.40*longest)
+            wall_frames[r,i]=(x,y,length,centers)
             # Keep each section's core in a stable bay; partial final sections
             # stay coherent rather than filling the remainder with random bays.
             groups=[list(range(k,min(k+rule.section,count))) for k in range(0,count,rule.section)]
@@ -123,9 +140,27 @@ def build(f,rule_id,floors,top,*,roof='flat',eave=None,party_edges=()):
                 c=centers[b];half=min(rule.width/2+.18,rule.spacing/2-.09)
                 # Wider two-bay shafts are reserved for the tall tower family.
                 U=centers[b+1]+half if rule.id=='tall_bay_tower' else c+half
-                projs.append(Projection(fid+f':projected-bay:{b}',fid,b,c-half,U,fh+.06,h-.12,rule.projection))
+                depth=rule.projection
+                if volume:
+                    factor={'walkup_sections':.22,'long_slab':.30,'section_slab':.45,'tower_stacks':.60,'tall_bay_tower':.80,'office_frame':.22}[rule.id]
+                    depth=min(2.40,max(depth,fh*factor*(.85+.30*(stable('volume-depth',f.building_id,i,b)%101)/100)))
+                    if rule.id in ('section_slab','tower_stacks','tall_bay_tower') and b+1<len(centers) and b+1 in next(g for g in groups if b in g):
+                        U=centers[b+1]+half
+                p=Projection(fid+f':projected-bay:{b}',fid,b,c-half,U,fh+.06,h-.12,depth)
+                if volume:
+                    tx,ty=(y[0]-x[0])/length,(y[1]-x[1])/length
+                    q=Polygon([(x[0]+u*tx+d*ty,x[1]+u*ty-d*tx) for u,d in ((p.u,0),(p.U,0),(p.U,p.depth),(p.u,p.depth))])
+                    if q.intersection(host).area>1e-8:continue
+                    envelopes[p.id]=q
+                projs.append(p)
             if r==0 and i==main and roof=='flat' and rule.roof_cores:
-                for b in core:cores.append(RoofCore(fid+f':roof-core:{b}',fid,centers[b],min(6.,max(2.5,longest*.08))))
+                for b in core:
+                    k=fid+f':roof-core:{b}';depth=min(6.,max(2.5,longest*.08))
+                    if volume:
+                        width=min(4.6,max(2.55,rule.spacing*1.35));length_m=min(3.2,max(1.85,fh*.80))
+                        height=min(2.85,max(1.55,fh*(.68 if floors>=10 else .53)))
+                        cores.append(RoofVolume(k,fid,centers[b],depth,width,length_m,height))
+                    else:cores.append(RoofCore(k,fid,centers[b],depth))
             facades.append(dict(facade=fid,long=long,section_bays=rule.section,core_bays=core,projected_bays=proj,entry_bays=entries,centers=centers))
             for floor in range(floors):
                 for b in range(count):
@@ -139,11 +174,40 @@ def build(f,rule_id,floors,top,*,roof='flat',eave=None,party_edges=()):
                     if s:columns.append((stable('ref-column',f.building_id,rule.id,i,b),s))
     # Full stacks only; 30 tris per glazed balcony is a conservative bound.
     # Reserve 650 triangles for parapets, projection strips, entries and roof.
-    capacity=max(0,(1800-650-len(old.mass.shell.triangles()))//30);used=0
-    for _,col in sorted(columns):
-        if used+len(col)<=capacity:
-            for key in col:slots[key]='balcony'
-            used+=len(col)
+    reserve=650;selected=();planned=0;used=0
+    shell=len(old.mass.shell.triangles())
+    if volume:
+        # Keep independent outward volumes nonoverlapping before spending on
+        # complete balcony stacks. Same-building footprint remains immutable.
+        accepted=[]
+        for p in sorted(projs,key=lambda p:(-p.depth,stable('volume',p.id),p.id)):
+            if not any(envelopes[p.id].intersection(envelopes[q.id]).area>1e-8 for q in accepted):accepted.append(p)
+        projs=accepted
+        # Reserve the conservative widened balcony envelope, not just its door.
+        safe=[]
+        for tie,col in columns:
+            r,i,_,b=col[0];x,y,L,centers=wall_frames[r,i]
+            tx,ty=(y[0]-x[0])/L,(y[1]-x[1])/L;u=centers[b]
+            width=min(2.10,profile.spacing-.20)+.40
+            q=Polygon([(x[0]+a*tx+d*ty,x[1]+a*ty-d*tx) for a,d in ((u-width/2,0),(u+width/2,0),(u+width/2,1.30),(u-width/2,1.30))])
+            if not any(q.intersection(envelopes[p.id]).area>1e-8 for p in projs):safe.append((tie,col))
+        offers=[Offer(p.id,10,3,stable('offer',p.id)) for p in projs]
+        offers.extend(Offer(q.id,24,2,stable('offer',q.id)) for q in cores)
+        def colid(col):return f'{f.building_id}:stack:{col[0][0]}:{col[0][1]}:{col[0][3]}'
+        offers.extend(Offer(colid(col),30*len(col),1,tie) for tie,col in safe)
+        reserve=detail_reserve(rings,len(entry_candidates),roof)
+        selected,planned=select(offers,max(0,1800-shell-reserve))
+        chosen=set(selected);projs=[p for p in projs if p.id in chosen];cores=[q for q in cores if q.id in chosen]
+        for _,col in safe:
+            if colid(col) in chosen:
+                for key in col:slots[key]='balcony'
+                used+=len(col)
+    else:
+        capacity=max(0,(1800-reserve-shell)//30)
+        for _,col in sorted(columns):
+            if used+len(col)<=capacity:
+                for key in col:slots[key]='balcony'
+                used+=len(col)
     plan=plan_facades(f,h,floors,profile,party_edges=party_edges,
                       entrance_edge=None if main is None else (0,main),
                       slot_policy=lambda r,i,fl,b,n,l:slots.get((r,i,fl,b),'blank'))
@@ -160,6 +224,9 @@ def build(f,rule_id,floors,top,*,roof='flat',eave=None,party_edges=()):
         if targets and all(o.role=='window' and p.u<o.u and o.u+o.width<p.U and p.z<o.z and o.z+o.height<p.Z for o in targets):projections.append(p)
     assert plan.footprint_digest==old.plan.footprint_digest==f.digest()
     count=sum(o.role=='balcony_door' for w in plan.facades for o in w.openings)
-    assert count<=used and count*30+len(old.mass.shell.triangles())<=1800-650
+    assert count<=used and count*30+shell<=max(shell,1800-reserve)
     v=replace(old,archetype=a,selection='reference_rule',plan=plan,requested_balcony_slots=sum(len(x) for _,x in columns),budget_omitted_slots=sum(len(x) for _,x in columns)-count)
+    if volume:
+        assert count*30+10*len(projections)+24*len(cores)<=planned
+        return replace(v,selection='volume_rule'),VolumePlan(rule,tuple(entries),tuple(projections),tuple(cores),tuple(facades),reserve,planned,selected)
     return v,SectionPlan(rule,tuple(entries),tuple(projections),tuple(cores),tuple(facades))
