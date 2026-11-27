@@ -17,6 +17,13 @@ def linear(a):
 def seed(s):return int.from_bytes(hashlib.sha256(s.encode()).digest()[:4],'little')%4096
 
 def material_arrays(materials,panelka,source,assets,private=None,hdr=None,size=512):
+    # Consume the exact output of render_material_uv.py in a clean CI checkout.
+    required=('concrete_panel','plaster_cream','stone_plinth','bitumen_roof','plaster_white')
+    for family in required:
+        for name in ('basecolor','normal','orm'):
+            path=materials/family/(name+'.png')
+            if not path.is_file():
+                raise FileNotFoundError(f"Missing generated PBR input {path}; run lab/render_material_uv.py or pass --materials")
     A=[];N=[];R=[];used=[]
     def add(family,paths=None,rough=.7,metal=0.):
         d=materials/family;al=paths[0] if paths else d/'basecolor.png';normal=paths[1] if paths else d/'normal.png';orm=paths[2] if paths else d/'orm.png'
@@ -174,4 +181,4 @@ def run(source,materials,panelka,assets,out,private=None,hdr=None,quick=False):
     sheet.save(out/'comparison.png');report=dict(schema='pcg.research.gpu-material-lab.v1',triangles=len(scene[0])//3,extra_triangles=0,glazed_modules=len(models),window_profiles=16,material_sources=info,views=rows,limitations=['Independent research renderer; not native UNIGINE or GPU hardware benchmark.','GGX direct lighting; approximate IBL with environment mips and constant diffuse irradiance, no full convolution or BRDF LUT.','Procedural analytic frames replace all low-resolution whole-window photos in this lane; Gaxil maps not yet incorporated into GPU profiles.','Loggia second-side glass is an environment approximation, no real multilayer transmission or furniture.','POM, atlas ray mapping and alpha discard run on GPU; private lobby uses rear/side/floor/ceiling cross faces only, not layered EXR foreground.','Mip filtering and anisotropy enabled; alpha coverage preservation and MSAA still pending in this renderer.','Roof family color corrected but ridge flashing/weathering and detailed facade seam/plinth material grammar need parity with CPU.','HDRI and private lobby optional local only; open CI uses procedural HDR sky and Three-Fenestra.'])
     (out/'report.json').write_text(json.dumps(report,indent=2));return report
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--source',type=Path,default=Path('artifacts/zero-window-entrance-stage'));p.add_argument('--materials',type=Path,default=Path('artifacts/materials'));p.add_argument('--panelka',type=Path,default=Path('assets/third_party/panelka'));p.add_argument('--assets',type=Path,default=Path('assets/third_party/window_research'));p.add_argument('--out',type=Path,default=Path('artifacts/gpu-material-lab'));p.add_argument('--private',type=Path);p.add_argument('--hdr',type=Path);p.add_argument('--quick',action='store_true');a=p.parse_args();run(**vars(a))
+    p=argparse.ArgumentParser();p.add_argument('--source',type=Path,default=Path('artifacts/zero-window-entrance-stage'));p.add_argument('--materials',type=Path,default=Path('artifacts/l4-material-uv'));p.add_argument('--panelka',type=Path,default=Path('assets/third_party/panelka'));p.add_argument('--assets',type=Path,default=Path('assets/third_party/window_research'));p.add_argument('--out',type=Path,default=Path('artifacts/gpu-material-lab'));p.add_argument('--private',type=Path);p.add_argument('--hdr',type=Path);p.add_argument('--quick',action='store_true');a=p.parse_args();run(**vars(a))
