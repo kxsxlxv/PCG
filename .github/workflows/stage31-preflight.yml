@@ -1,0 +1,60 @@
+name: PCG Stage 31 candidate preflight
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage31-preflight.yml
+permissions: {}
+jobs:
+  preflight:
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke' && github.event_name == 'push'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Pinned candidate on isolated WSL
+        shell: cmd
+        env:
+          PCG_SCRIPT: |
+            set -euo pipefail
+            export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_TERMINAL_PROMPT=0
+            export PYTHONHASHSEED=0 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MPLBACKEND=Agg
+            export LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=surfaceless
+            work=$(mktemp -d -t pcg-stage31.XXXXXXXX)
+            trap 'rm -rf -- "$work"' EXIT
+            cd "$work"
+            python3 -m venv venv
+            git init -q src
+            cd src
+            git -c core.hooksPath=/dev/null fetch --quiet --depth=1 https://github.com/kxsxlxv/PCG.git ddaa591a81c83b9f1b9fdd40fcc035223e76c733
+            git -c core.hooksPath=/dev/null checkout --quiet --detach FETCH_HEAD
+            test "$(git rev-parse HEAD)" = ddaa591a81c83b9f1b9fdd40fcc035223e76c733
+            ../venv/bin/python -m pip --isolated --disable-pip-version-check install --index-url https://pypi.org/simple --no-cache-dir -r lab/requirements.txt moderngl==5.12.0 glcontext==3.0.0
+            export PYTHONPATH=src:lab
+            ../venv/bin/python -m unittest discover -s tests/unit -v
+            echo STAGE31_UNIT_PASS
+            g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o "$work/decoder"
+            mkdir -p artifacts/zero-volume-grammar
+            ../venv/bin/python - "$work/decoder" <<'PY'
+            import sys
+            from pathlib import Path
+            from zero_reference_grammar import fixtures, compile_case
+            for i in (0,1):
+                specs=list(fixtures(i))
+                result=compile_case(specs,'volume',Path('artifacts/zero-volume-grammar')/f'grammar_{i}',Path(sys.argv[1]))
+                r=result['report']
+                print('PREFLIGHT_TILE',i,r['near_triangles'],r['lite_triangles'],r['max_building_triangles'],r['projected_fronts'],flush=True)
+            print('STAGE31_GEOMETRY_EXPORT_PASS',flush=True)
+            PY
+            ../venv/bin/python lab/volume_stress.py
+            echo STAGE31_PREFLIGHT_PASS
+            out=$(wslpath -a -u "$1")
+            cp -a artifacts/zero-volume-grammar/. "$out/"
+        run: |
+          py -3 -u -c "import subprocess,sys,os,pathlib; p=pathlib.Path(os.environ['RUNNER_TEMP'])/('pcg-stage31-'+os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']); p.mkdir(exist_ok=False); sys.exit(subprocess.run(['wsl.exe','--exec','bash','--noprofile','--norc','-s','--',str(p)],input=os.environ['PCG_SCRIPT'].replace(chr(13), '').encode('utf-8'),timeout=1080).returncode)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage31-preflight
+          path: ${{ runner.temp }}/pcg-stage31-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 7
