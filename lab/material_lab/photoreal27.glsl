@@ -13,6 +13,7 @@ float phNoise(vec2 p,float seed){
 #define phMaterial mat
 #define phMaterialTint matTint
 #endif
+uniform int q33Enabled;
 bool phContains(vec2 s,vec4 r){return all(greaterThanEqual(s,r.xy))&&all(lessThan(s,r.zw));}
 vec2 phWeights(float nv,float f0,float trans){
     float f=f0+(1.-f0)*pow(1.-clamp(nv,0.,1.),5.);float r=2.*f/(1.+f);
@@ -192,7 +193,22 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
     bool valid=bays>0&&floorId>=0&&floorId<floors&&bay>=0&&bay<bays;
     if(valid){rect=O(slot,0);other=O(slot,1);data=O(slot,2);vec4 joint=rect;
         if(data.y>0.)joint=vec4(min(rect.xy,other.xy),max(rect.zw,other.zw));float sill=data.x==2?.17:dims.z;
-        if(phContains(s,rect))return phWindow(s,rect,joint,sill,int(data.x),data.z,data.w,id,p,t,up,n,v,direct);
+        if(phContains(s,rect)){
+            vec3 original=phWindow(s,rect,joint,sill,int(data.x),data.z,data.w,id,p,t,up,n,v,direct);
+            // Only ordinary unpaired windows; the original opening lookup is
+            // authoritative. No new aperture, no changes to night occupancy.
+            if(q33Enabled==1&&night<.5&&data.x==1.&&data.y==0.){
+                int donor=int(O(slot,3).x)-1;
+                if(donor>=0){
+                    vec2 q=(s-rect.xy)/(rect.zw-rect.xy);
+                    float edge=min(min(q.x,1.-q.x),min(q.y,1.-q.y));
+                    vec2 st=clamp(vec2(q.x,1.-q.y),.015,.985);
+                    vec3 sampleColor=matTint(donor,st,p,n,t,-up,v,direct,vec3(1.));
+                    return mix(original,sampleColor,.80*smoothstep(.018,.075,edge));
+                }
+            }
+            return original;
+        }
         if(phContains(s,other))return phWindow(s,other,joint,sill,int(data.y),data.z,data.w,id,p,t,up,n,v,direct);
     }
     int entry=start+bays*floors;vec4 en=O(entry,0);vec4 ed=O(entry,2);
@@ -272,7 +288,20 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
         // Opaque curtain-wall spandrels, not additional transparent windows.
         vec3 panel=vec3(.105,.155,.185)*tint;return brdf(panel,n,v,.31,.27,1.,p,direct)+phReflect(n,v,.32)*.055;
     }
-    return phMaterialTint(layer,uv0,p,n,t,-up,v,direct,tint*accent);
+    vec3 original=phMaterialTint(layer,uv0,p,n,t,-up,v,direct,tint*accent);
+    if(q33Enabled==1&&night<.5&&valid&&s.y>.55&&clearance>.08){
+        int donor=int(O(slot,3).y)-1;
+        if(donor>=0){
+            vec2 q=vec2((s.x-c.x)/max(c.y,.01)-float(bay)+.5,1.-floorZ/max(c.z,.01));
+            float edge=min(min(q.x,1.-q.x),min(q.y,1.-q.y));
+            vec2 st=clamp(q,.015,.985);
+            float rough=texture(ormMaps,vec3(st,float(donor))).g;
+            float w=.52*smoothstep(.03,.13,edge)*smoothstep(.08,.20,clearance)*smoothstep(.20,.36,rough);
+            vec3 d=matTint(donor,st,p,n,t,-up,v,direct,vec3(tint));
+            return mix(original,d,w);
+        }
+    }
+    return original;
 }
 vec3 phSurface(int id,vec2 s,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct){
     vec4 a=M(id,0),prop=M(id,8),q=M(id,12);int role=int(q.z),layer=int(a.y);

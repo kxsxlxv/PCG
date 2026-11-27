@@ -1,0 +1,88 @@
+name: PCG Stage 33 integrated donor overlay
+on:
+  push:
+    branches: [research/stage33-candidate]
+    paths:
+      - lab/reference_integrated33.py
+      - lab/material_lab/photoreal27.glsl
+      - .github/workflows/stage33-integrated.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: src:lab
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      PYTHONHASHSEED: "0"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      EGL_PLATFORM: surfaceless
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch and authenticate accepted Stage32 and shared donor atlas
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          curl -fLsS --retry 2 "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15211838298/zip -o "$RUNNER_TEMP/stage32.zip"
+          echo "bf5e342bc6704bc441147cf45ee68a8e8dbc3b68adc7e6a717a397e6122c5593  $RUNNER_TEMP/stage32.zip" | sha256sum -c
+          curl -fLsS --retry 2 "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15222862129/zip -o "$RUNNER_TEMP/atlas.zip"
+          echo "2004804ac7892cdbfa89effdd96d62efc673b8f3abf8e55923ec7cd650acd60e  $RUNNER_TEMP/atlas.zip" | sha256sum -c
+          python - <<'PY'
+          import os,zipfile
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          with zipfile.ZipFile(root/'stage32.zip') as z:
+              for n in z.namelist():
+                  p=Path(n)
+                  if p.is_absolute() or '..' in p.parts:raise ValueError(n)
+                  if p.parts[0] in ('zero-natural-architecture','l4-material-uv','zero-efficient-grammar') and not n.endswith('/'):
+                      target=Path('artifacts')/p;target.parent.mkdir(parents=True,exist_ok=True)
+                      target.write_bytes(z.read(n))
+          with zipfile.ZipFile(root/'atlas.zip') as z:
+              for n in z.namelist():
+                  p=Path(n)
+                  if p.is_absolute() or '..' in p.parts:raise ValueError(n)
+              z.extractall('atlas')
+          PY
+      - name: Install dependencies and run unit tests
+        run: |
+          python -m pip install -r lab/requirements.txt moderngl==5.12.0 glcontext==3.0.0
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libegl-dev libgl1 libgl1-mesa-dri
+          python -m unittest discover -s tests/unit -v
+      - name: Exact geometry replay and donor shader comparison
+        run: python lab/reference_integrated33.py --source artifacts/zero-efficient-grammar --atlas atlas --out results
+      - name: Validate manifest and emit actual visual comparison sheets
+        run: |
+          python - <<'PY'
+          import base64,io,json,hashlib
+          from pathlib import Path
+          from PIL import Image
+          root=Path('results');m=json.loads((root/'bundle.json').read_text())
+          for p,h in m.items():assert hashlib.sha256((root/p).read_bytes()).hexdigest()==h,p
+          for p in sorted(root.glob('comparison_*.png'))+sorted(root.glob('*_closeup.png')):
+              im=Image.open(p).convert('RGB');im.thumbnail((1280,1100))
+              b=io.BytesIO();im.save(b,format='JPEG',quality=84,optimize=True)
+              s=base64.b64encode(b.getvalue()).decode()
+              print('INTEGRATED33_IMAGE_BEGIN',p.stem,len(s),flush=True)
+              for i in range(0,len(s),2048):print('INTEGRATED33_IMAGE_CHUNK',p.stem,s[i:i+2048],flush=True)
+              print('INTEGRATED33_IMAGE_END',p.stem,flush=True)
+          print('INTEGRATED33_MANIFEST',len(m))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage33-integrated-overlay
+          path: results
+          if-no-files-found: error
+          retention-days: 14
