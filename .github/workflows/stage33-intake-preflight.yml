@@ -10,7 +10,7 @@ jobs:
   preflight:
     if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke' && github.event_name == 'push'
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - name: Synthetic tests and optional private local intake
         shell: cmd
@@ -84,5 +84,26 @@ jobs:
                 print('ROUGHNESS_AGGREGATE',json.dumps({k:a[k] for k in ('width','height','dark_fraction','rectangular_candidates')}))
             PY
             echo PRIVATE_SOURCE_INTAKE_PASS
+            out=$(wslpath -a -u "$3")
+            mkdir -p "$out/originals" "$out/analysis"
+            cp "$low_path" "$out/originals/buildings_2012.zip"
+            cp "$high_path" "$out/originals/a69803a3e1134ec7ba96398d19eb8ade.gltf"
+            for map in albedo normal roughness; do
+              matches=()
+              while IFS= read -r -d '' p; do matches+=("$p"); done < <(find "$(dirname "$high_path")" -maxdepth 1 -type f -iname "*_RBP_${map}.*" -print0)
+              test "${#matches[@]}" = 1 || { echo AMBIGUOUS_OR_MISSING_MAP "$map"; exit 1; }
+              cp "${matches[0]}" "$out/originals/"
+            done
+            cp "$dest/catalog.json" "$out/analysis/"
+            cp "$dest/roughness_candidates.png" "$out/analysis/"
+            (cd "$out"; find originals analysis -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+            echo AUTHORIZED_SOURCE_ARTIFACT_READY
         run: |
-          py -3 -u -c "import subprocess,sys,os; sys.exit(subprocess.run(['wsl.exe','--exec','bash','--noprofile','--norc','-s','--',os.environ['USERPROFILE'],os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']],input=os.environ['PCG_SCRIPT'].replace(chr(13), '').encode('utf-8'),timeout=660).returncode)"
+          py -3 -u -c "import subprocess,sys,os,pathlib; p=pathlib.Path(os.environ['RUNNER_TEMP'])/('pcg-stage33-source-'+os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']); p.mkdir(exist_ok=False); sys.exit(subprocess.run(['wsl.exe','--exec','bash','--noprofile','--norc','-s','--',os.environ['USERPROFILE'],os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT'],str(p)],input=os.environ['PCG_SCRIPT'].replace(chr(13), '').encode('utf-8'),timeout=1080).returncode)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage33-authorized-donor-sources
+          path: ${{ runner.temp }}/pcg-stage33-source-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
