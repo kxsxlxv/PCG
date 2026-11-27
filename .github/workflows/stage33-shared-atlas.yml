@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 223e656324c83f1bcc0d7a20694450fad29bd20c
+          ref: 182265a3c498a1014783799b6b7f61a332e0e1b7
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 223e656324c83f1bcc0d7a20694450fad29bd20c
+          test "$(git rev-parse HEAD)" = 182265a3c498a1014783799b6b7f61a332e0e1b7
           api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46042369932
           auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
           done_run=false
@@ -109,7 +109,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: pcg-stage33-shared-atlas
+          name: pcg-stage33-coherent-atlas
           path: results
           if-no-files-found: error
           retention-days: 7
