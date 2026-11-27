@@ -10,7 +10,7 @@ concurrency:
 jobs:
   probes:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       MPLBACKEND: Agg
       PYTHONHASHSEED: "0"
@@ -29,6 +29,15 @@ jobs:
           python -m pip install -r lab/requirements.txt
           mkdir -p artifacts
           python -m pip freeze > artifacts/versions.txt
+      - name: Prepare software EGL context
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libegl-dev libgl1 libgl1-mesa-dri
+          python -m pip install moderngl==5.12.0 glcontext==3.0.0
+          python -c 'import moderngl, ctypes.util; c=moderngl.create_context(standalone=True,backend="egl",require=330,libegl=ctypes.util.find_library("EGL"),libgl=ctypes.util.find_library("GL")); print(c.info["GL_RENDERER"])'
       - name: Test core contracts
         env:
           PYTHONPATH: src
@@ -39,6 +48,165 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/render_core_shell.py
+      - name: Zero-geometry batched facade research
+        env:
+          PYTHONPATH: src
+        run: python lab/render_zero_geometry_facades.py
+      - name: Neutral zero-geometry tile integration reference
+        env:
+          PYTHONPATH: src
+        run: python lab/compile_zero_geometry_tile.py
+      - name: Multi-tile compiler and cross-language ABI
+        env:
+          PYTHONPATH: src
+        run: |
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o /tmp/pcg_zero_tile_abi
+          python lab/compile_zero_tiles.py --self-test --decoder /tmp/pcg_zero_tile_abi
+      - name: Approved synthetic GIS pilot zero-opening ABI bridge
+        env:
+          PYTHONPATH: src
+        run: |
+          python lab/pack_approved_pilot_zero_tiles.py --decoder /tmp/pcg_zero_tile_abi
+      - name: Software GLSL facade shader reference
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: |
+          python lab/render_zero_facade_glsl.py
+      - name: Shared authored facade detail and virtual interior comparison
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/render_zero_facade_glsl.py --detail-candidate
+      - name: Actual roof silhouette geometry budgets
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_roof_budgets.py
+      - name: Reference-driven facade zoning and balcony equipment budgets
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_facade_architecture.py /tmp/pcg_zero_tile_abi
+      - name: Combined roof facade full anchor LOD and compact records
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_combined_lod.py /tmp/pcg_zero_tile_abi
+      - name: Opening-aware panel seams and architectural roof edge details
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_architecture_correctness.py /tmp/pcg_zero_tile_abi
+      - name: Slope-continuous roof overhang coping and bent drainage
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_roof_construction.py /tmp/pcg_zero_tile_abi
+      - name: Partial balcony envelopes and compact closed roof guards
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_balcony_guard_variants.py /tmp/pcg_zero_tile_abi
+      - name: Actual recessed loggia stacks and canonical wall ABI
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_recessed_loggias.py /tmp/pcg_zero_tile_abi
+      - name: Shared alpha cutout strips GLB and software EGL depth filtering
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_alpha_cutout.py
+      - name: Visual repair of full-bay recessed loggias with cutout and shadow depth
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_loggia_repair.py /tmp/pcg_zero_tile_abi
+      - name: Integrated roof balcony and repaired loggia shared cutouts
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_integrated_cutouts.py /tmp/pcg_zero_tile_abi
+      - name: External balconies only with preserved host and cutout guards
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_external_balconies.py /tmp/pcg_zero_tile_abi
+      - name: GPU material and loggia research on exported scene
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/material_lab/gpu_lab.py --materials artifacts/l4-material-uv
+      - name: Regional archetypes and coherent architectural variation
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_archetypes.py /tmp/pcg_zero_tile_abi
+      - name: Unified architectural details and PBR render for 36 buildings
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_unified_architecture.py /tmp/pcg_zero_tile_abi
+      - name: Regional photoreal material and semantic room research on exact stage-26 geometry
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_photoreal.py
+      - name: Natural material variation bounded architecture and compact PBR storage
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_natural_architecture.py /tmp/pcg_zero_tile_abi
+      - name: Reference PBR overlay on verified stage-28 geometry (synthetic only)
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_reference_assets.py --out artifacts/zero-reference-pbr
+      - name: Reference equipment on matching Near and Lite geometry with PBR overlay
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_reference_equipment.py --overlay artifacts/zero-reference-pbr --out artifacts/zero-reference-equipment
+      - name: Reference-informed section grammar on matched synthetic footprints
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --out artifacts/zero-reference-grammar
+      - name: Volume grammar on matched Stage 30 footprints
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: |
+          python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --volume --out artifacts/zero-volume-grammar
+          python lab/volume_stress.py
+          python lab/volume_review.py artifacts/zero-volume-grammar
+      - name: Quality per triangle on matched Stage 31 buildings
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: |
+          python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --efficient --out artifacts/zero-efficient-grammar
+          python lab/quality_stress32.py
+          python lab/volume_review.py artifacts/zero-efficient-grammar
+      - name: Package replay source for private offline inputs
+        run: git archive --format=zip -o /tmp/pcg-stage29-replay.zip HEAD lab src assets/third_party
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage29-replay
+          path: /tmp/pcg-stage29-replay.zip
+          retention-days: 14
+      - name: Actual 1024-building export and bundle verification
+        env:
+          PYTHONPATH: src
+        run: |
+          python lab/stress_zero_tiles.py
       - name: Run research probes
         run: python lab/run_probes.py
       - name: Report

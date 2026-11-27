@@ -9,3 +9,39 @@ Read docs/ARCHITECTURE.md, DATA_MODEL.md, TECHNICAL_SPECIFICATION.md, IMPLEMENTA
 - Include fixture/test, metrics and actual geometry-derived image for visual changes. Save generated artifacts outside tracked source; upload CI artifacts even when failure occurs. No screenshot mockup or claims of SDK/GPU test without actual run. Separate local vs Actions run and synthetic vs real data results.
 - No change to goldens without explicit, documented visual review; assistant review is sufficient within agreed scope. No silent regression/disabled tests or relaxed thresholds just to pass. Record failing fixture and known gaps. Keep logs concise and reproducible.
 - Before handing off: summarize changed files, commands, exact test status, CI run/artifact references, blockers, decisions and next single task. Do not report an unrun test as PASS. Local SDK G0–G12 are separate from CPU Lab.
+
+## Consolidated numbered research-stage delivery
+
+For the ongoing research PR, each numbered stage is one bounded implementation,
+not a sequence of lettered micro-stages. Design and implement the entire stage,
+run the relevant local tests, and prepare one coherent commit; preserve all
+existing checks. Trigger CI for that exact head. Poll in the same working
+session while tools permit, rather than handing off routine CI waiting to the
+user. Download the actual CI artifact, verify its files, and visually inspect
+the actual rendered output, including the previous stage when available.
+Record metrics, CI links, known defects, decisions and the acceptance outcome
+in the PR. Mark a stage accepted only after successful CI and actual visual
+review; if tests, artifact access or the session are blocked, report the exact
+blocker and NOT ACCEPTED. Do not invent a successful run or visual inspection.
+Do not start the next stage or merge research PR #23 into main merely because
+CI passed. No force pushes, disabled checks, or micro-commits to evade the gate.
+
+### Full-cycle acceptance rule (user reaffirmed 2026-11-27)
+
+Treat each numbered research stage as one complete delivery, not as lettered
+sub-stages or separate design/implementation/test replies. Perform substantial
+design and implementation, local correctness tests and actual local visual QA
+before publishing one coherent commit whenever possible. Do not hand off routine
+CI monitoring: remain in the same active working session, use bounded pauses and
+poll the exact commit's run until terminal status while tools permit. CI in
+progress is not a completed stage. Download the actual artifact, verify its
+digest and manifests, inspect previous and current actual rendered images, then
+document quantitative results, remaining defects and acceptance in the PR and
+final report. A failed CI is not a successful stage; investigate and correct
+within the same stage, document any necessary extra commit or rerun, and never
+force-push, bypass a gate or disable tests. Only a genuine tool/session limit,
+unavailable input, failed test that cannot be corrected, or another material
+blocker warrants an incomplete handoff; report that specifically and mark the
+stage NOT ACCEPTED. Do not promise asynchronous work or substitute a timer for
+actual CI status. Keep private reference textures and derived private renders
+outside the public repository and public CI unless redistribution is verified.
