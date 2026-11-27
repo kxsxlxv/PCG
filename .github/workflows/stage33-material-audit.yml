@@ -1,0 +1,85 @@
+name: PCG Stage 33 material experiments independent artifact audit
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage33-material-audit.yml
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Verify completed archive digests and every manifest file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          api=https://api.github.com/repos/kxsxlxv/PCG
+          get_artifact() {
+            local run="$1" name="$2" dest="$3" id digest ok=false
+            for i in $(seq 1 80); do
+              curl -fsS "${auth[@]}" "$api/actions/runs/$run" -o "$RUNNER_TEMP/run.json"
+              if test "$(jq -r .status "$RUNNER_TEMP/run.json")" = completed; then
+                test "$(jq -r .conclusion "$RUNNER_TEMP/run.json")" = success
+                ok=true; break
+              fi
+              sleep 4
+            done
+            test "$ok" = true
+            curl -fsS "${auth[@]}" "$api/actions/runs/$run/artifacts?name=$name" -o "$RUNNER_TEMP/arc.json"
+            test "$(jq -r '.artifacts | length' "$RUNNER_TEMP/arc.json")" = 1
+            id=$(jq -r '.artifacts[0].id' "$RUNNER_TEMP/arc.json")
+            digest=$(jq -r '.artifacts[0].digest' "$RUNNER_TEMP/arc.json")
+            echo "AUDIT_ARTIFACT $name $id $digest"
+            curl -fLsS --retry 2 "${auth[@]}" "$api/actions/artifacts/$id/zip" -o "$RUNNER_TEMP/$dest.zip"
+            echo "${digest#sha256:}  $RUNNER_TEMP/$dest.zip" | sha256sum -c
+          }
+          get_artifact 46042369932 pcg-stage33-authorized-donor-sources source
+          get_artifact 46045705999 pcg-stage33-pbr-transfer high
+          get_artifact 46046335925 pcg-stage33-native-low low
+          get_artifact 46046546388 pcg-stage33-coherent-atlas shared
+          python - <<'PY'
+          import hashlib,json,os,zipfile,struct,statistics
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          with zipfile.ZipFile(root/'source.zip') as z:
+              for line in z.read('SHA256SUMS').decode().splitlines():
+                  digest,name=line.split('  ',1)
+                  assert hashlib.sha256(z.read(name)).hexdigest()==digest,name
+              cat=json.loads(z.read('analysis/catalog.json'))
+              for f in cat['files'][:-1]:
+                  m=f['materials'];b=[x['bindings'] for x in m]
+                  pairs=[(x['baseColor']['image'],x['normal']['image']) for x in b if 'baseColor' in x and 'normal' in x]
+                  print('NATIVE_LOW_BINDING_AUDIT',json.dumps(dict(materials=len(m),images=len(f['images']),basecolor=sum('baseColor' in x for x in b),normal=sum('normal' in x for x in b),roughness=sum('metallicRoughness' in x for x in b),basecolor_normal_same_image=sum(a==b for a,b in pairs),normal_base_pairs=len(pairs))))
+          total=0
+          for name in ('high','low','shared'):
+              with zipfile.ZipFile(root/(name+'.zip')) as z:
+                  manifest=json.loads(z.read('bundle.json'))
+                  for p,h in manifest.items():assert hashlib.sha256(z.read(p)).hexdigest()==h,p
+                  total+=len(manifest)
+                  report=json.loads(z.read('report.json'))
+                  glbs=[p for p in manifest if p.endswith('.glb')]
+                  for p in glbs:
+                      b=z.read(p)
+                      magic,ver,n=struct.unpack_from('<4sII',b)
+                      assert magic==b'glTF' and ver==2 and n==len(b)
+                      length,kind=struct.unpack_from('<II',b,12)
+                      assert kind==0x4e4f534a
+                      g=json.loads(b[20:20+length])
+                      assert len(g['materials'])==1 and len(g['images'])==3 and len(g['textures'])==3
+                      m=g['materials'][0];assert m['normalTexture']['index']==1
+                      assert m['pbrMetallicRoughness']['baseColorTexture']['index']==0 and m['pbrMetallicRoughness']['metallicRoughnessTexture']['index']==2
+                      a=g['meshes'][0]['primitives'][0]['attributes']
+                      assert 'TANGENT' in a and 'NORMAL' in a and 'TEXCOORD_0' in a
+                  if name=='shared':
+                      assert report['single_material'] and report['stress_cases']==128 and report['stress_max_triangles']<=1800
+                      print('SHARED_FINAL_AUDIT',json.dumps(dict(files=len(manifest),glbs=len(glbs),modules=report['modules'],families=report['families'],buildings=len(report['buildings']),stress_max=report['stress_max_triangles'],entries=sum(x['authored_entries'] for x in report['buildings']),stacks=sum(x['column_stacks'] for x in report['buildings']))))
+                  else:
+                      print('MATCH_FINAL_AUDIT',name,json.dumps(dict(files=len(manifest),glbs=len(glbs),models=len(report['models']),mean_iou=statistics.mean(s['iou'] for r in report['models'] for s in r['scores']),mean_rgb_mae=statistics.mean(s['rgb_mae'] for r in report['models'] for s in r['scores']))))
+          print('STAGE33_MATERIAL_FILES_VERIFIED',total)
+          PY
