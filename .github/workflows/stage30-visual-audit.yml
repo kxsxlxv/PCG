@@ -1,0 +1,53 @@
+name: PCG Stage 30 artifact visual audit
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage30-visual-audit.yml
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download exact immutable Stage 30 visual artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fLsS --retry 2 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15196313177/zip -o "$RUNNER_TEMP/stage30.zip"
+          echo "8af7194145f6f8377605aeecbe98f9853b09614b651981105c3bfb1520f6c5e3  $RUNNER_TEMP/stage30.zip" | sha256sum -c
+      - name: Install image decoder
+        run: python -m pip install Pillow==12.3.0
+      - name: Verify source PNG hashes and emit review thumbnails
+        run: |
+          python - <<'PY'
+          import base64, hashlib, io, json, os, zipfile
+          from PIL import Image
+          with zipfile.ZipFile(os.path.join(os.environ['RUNNER_TEMP'],'stage30.zip')) as z:
+              names=z.namelist()
+              prefix=next(n[:-len('comparison_0.png')] for n in names if n.endswith('zero-reference-grammar/comparison_0.png'))
+              manifest=json.loads(z.read(prefix+'bundle.json'))
+              for i in range(2):
+                  name=f'comparison_{i}.png'
+                  data=z.read(prefix+name)
+                  assert hashlib.sha256(data).hexdigest()==manifest[name]
+                  im=Image.open(io.BytesIO(data)).convert('RGB')
+                  print('VERIFIED_PNG',name,im.size,manifest[name],flush=True)
+                  for j in range(2):
+                      crop=im.crop((0,j*1144,im.width,min((j+1)*1144,im.height)))
+                      crop.thumbnail((1100,1100))
+                      b=io.BytesIO()
+                      crop.save(b,format='JPEG',quality=78,optimize=True)
+                      s=base64.b64encode(b.getvalue()).decode('ascii')
+                      key=f'{i}_{j}'
+                      print('IMAGE_BEGIN',key,len(s),flush=True)
+                      for k in range(0,len(s),2048):
+                          print('IMAGE_CHUNK',key,s[k:k+2048],flush=True)
+                      print('IMAGE_END',key,flush=True)
+          print('STAGE30_SOURCE_ARTIFACT_AUDIT_PASS')
+          PY
