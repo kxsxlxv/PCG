@@ -1,0 +1,95 @@
+name: PCG Stage 31 scale export
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage31-scale-export.yml
+permissions: {}
+jobs:
+  scale:
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke' && github.event_name == 'push'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 25
+    steps:
+      - name: Export and read back 1024 distinct volume-grammar buildings
+        shell: cmd
+        env:
+          PCG_SCRIPT: |
+            set -euo pipefail
+            export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_TERMINAL_PROMPT=0
+            export PYTHONHASHSEED=0 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MPLBACKEND=Agg
+            export LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=surfaceless
+            work=$(mktemp -d -t pcg-stage31-scale.XXXXXXXX)
+            trap 'rm -rf -- "$work"' EXIT
+            cd "$work"
+            python3 -m venv venv
+            git init -q src
+            cd src
+            git -c core.hooksPath=/dev/null fetch --quiet --depth=1 https://github.com/kxsxlxv/PCG.git e0c31ab003a6d9cb9e9d024166d9effe652187f7
+            git -c core.hooksPath=/dev/null checkout --quiet --detach FETCH_HEAD
+            test "$(git rev-parse HEAD)" = e0c31ab003a6d9cb9e9d024166d9effe652187f7
+            ../venv/bin/python -m pip --isolated --disable-pip-version-check install --index-url https://pypi.org/simple --no-cache-dir -r lab/requirements.txt moderngl==5.12.0 glcontext==3.0.0
+            export PYTHONPATH=src:lab
+            g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o "$work/decoder"
+            out=$(wslpath -a -u "$1")
+            ../venv/bin/python - "$work/decoder" "$out" <<'PY'
+            from dataclasses import asdict
+            import json,hashlib,subprocess,sys,tempfile,shutil,logging
+            from pathlib import Path
+            import numpy as np
+            from pcg.footprint import Footprint
+            from pcg.reference_grammar import build
+            from zero_reference_grammar import fixtures,swept_pipe
+            import unified_detail as detail
+            import zero_unified_architecture as uni
+            import compile_zero_geometry_tile as tile
+            from compile_zero_tiles import pack_table,LAYERS,new_float32_audit
+            from zero_window_entrance_stage import retain
+            logging.getLogger('trimesh').setLevel(logging.ERROR)
+            decoder,out=Path(sys.argv[1]),Path(sys.argv[2])
+            rows=[];tiles=[];n_total=l_total=0
+            for j in range(64):
+                for variant in (0,1):
+                    cases=[];plans={}
+                    for s in fixtures(variant):
+                        src=s['footprint'];bid=f'volume31:{j}:{s["id"]}';scale=1.+.005*(j%11)
+                        f=Footprint(bid,[(x*scale,y*scale) for x,y in src.exterior],[[(x*scale,y*scale) for x,y in r] for r in src.holes])
+                        v,p=build(f,s['rule'],s['floors'],s['top'],roof=s['roof'],eave=s['eave'],party_edges=s['party'],volume=True)
+                        assert v.plan.footprint_digest==f.digest() and v.top_m==s['top']
+                        rec=dict(id=bid,offset=s['offset'],footprint=asdict(f),decision=v.decision(),architecture=asdict(v.plan))
+                        q=detail.plan(rec,swept_pipe,(f,v),p);plans[bid]=q
+                        assert 0<q['lite']<=q['near']<=1800 and all(not w.openings for w in v.plan.facades if w.party)
+                        cases.append(dict(id=bid,building_id=bid,outer=f.exterior,holes=f.holes,profile=v.archetype.use,floors=s['floors'],eave_m=v.eave_m,roof=v.mass.actual_roof,rise=v.top_m-v.eave_m,offset=s['offset'],variant=v,party_edges=s['party']))
+                    groups,table,cells,_=tile.compile_scene(cases,audit_samples=64)
+                    with tempfile.TemporaryDirectory() as td:
+                        root=Path(td);uni.OUT=root
+                        actual,owners,placements,dead,counts=uni.export_details(groups,table,cases,plans)
+                        near,no=uni.scene_from(groups,table,root/'tile_opaque.glb',actual,owners)
+                        lg,_=retain(groups,dead);lite,lo=uni.scene_from(lg,table,root/'tile_lite_opaque.glb',actual,owners)
+                        assert near[3]==lite[3]
+                        for bid,q in plans.items():
+                            n=int(np.count_nonzero(no==bid)//3);l=int(np.count_nonzero(lo==bid)//3)
+                            assert n==q['near'] and l==q['lite'] and 0<l<=n<=1800
+                            rows.append(dict(id=bid,near=n,lite=l));n_total+=n;l_total+=l
+                        (root/'facade_cells.bin').write_bytes(cells.tobytes())
+                        pack_table(table,cells,root/'facade_params.bin',new_float32_audit())
+                        cpp=json.loads(subprocess.run([str(decoder),str(root/'facade_params.bin'),str(root/'facade_cells.bin'),str(len(LAYERS))],capture_output=True,text=True,check=True).stdout)
+                        assert cpp['records']==len(table) and cpp['cells']==len(cells)
+                        files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in root.iterdir() if p.is_file()}
+                        tiles.append(dict(id=f'{j}_{variant}',buildings=len(cases),near=len(near[0])//3,lite=len(lite[0])//3,cpp=cpp,sha256=files))
+                        if j in (0,63):shutil.copytree(root,out/f'example_{j}_{variant}')
+                if (j+1)%8==0:print('SCALE_EXPORT_PROGRESS',len(rows),flush=True)
+            assert len(rows)==len({r['id'] for r in rows})==1024 and len(tiles)==128
+            report=dict(buildings=len(rows),tiles=len(tiles),near_total=n_total,lite_total=l_total,near_max=max(x['near'] for x in rows),scope='actual Near/Lite GLB export/readback, cutout meshes and C++ ABI before Stage 28/29 refinement; sample GLBs plus all tile hashes',rows=rows,tile_reports=tiles)
+            (out/'report.json').write_text(json.dumps(report,indent=2))
+            print('SCALE_EXPORT_PASS',json.dumps({k:v for k,v in report.items() if k not in ('rows','tile_reports')}),flush=True)
+            PY
+        run: |
+          py -3 -u -c "import subprocess,sys,os,pathlib; p=pathlib.Path(os.environ['RUNNER_TEMP'])/('pcg-stage31-scale-'+os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']); p.mkdir(exist_ok=False); sys.exit(subprocess.run(['wsl.exe','--exec','bash','--noprofile','--norc','-s','--',str(p)],input=os.environ['PCG_SCRIPT'].replace(chr(13), '').encode('utf-8'),timeout=1380).returncode)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage31-scale-export
+          path: ${{ runner.temp }}/pcg-stage31-scale-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 7
