@@ -14,16 +14,17 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Verify runner and tool availability (read-only)
-        shell: powershell
+        shell: cmd
         env:
           ACTUAL_RUNNER_NAME: ${{ runner.name }}
           ACTUAL_RUNNER_OS: ${{ runner.os }}
           ACTUAL_RUNNER_ARCH: ${{ runner.arch }}
         run: |
-          Write-Host "Runner: $env:ACTUAL_RUNNER_NAME ($env:ACTUAL_RUNNER_OS/$env:ACTUAL_RUNNER_ARCH)"
-          if ($env:ACTUAL_RUNNER_NAME -ne 'DESKTOP-UM6MS08') { throw 'Unexpected runner name' }
-          foreach ($tool in @('python','py','git','node','g++','wsl','docker')) {
-            $cmd = Get-Command $tool -ErrorAction SilentlyContinue
-            Write-Host "$tool available: $([bool]$cmd)"
-          }
-          Write-Host 'RUNNER_SMOKE_PASS'
+          echo Runner: %ACTUAL_RUNNER_NAME% %ACTUAL_RUNNER_OS%/%ACTUAL_RUNNER_ARCH%
+          if not "%ACTUAL_RUNNER_NAME%"=="DESKTOP-UM6MS08" exit /b 1
+          for %%T in (python py git node g++ wsl docker) do (
+            where %%T >nul 2>&1
+            if errorlevel 1 (echo %%T available: false) else (echo %%T available: true)
+          )
+          echo RUNNER_SMOKE_PASS
+          exit /b 0
