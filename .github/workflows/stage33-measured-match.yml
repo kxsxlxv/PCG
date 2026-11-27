@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 0a95e645bb84c8295ab39c68389b6ae7b150cc8b
+          ref: 3de9229eb2b4a357544ca3f3be9568c2b3bf64bb
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 0a95e645bb84c8295ab39c68389b6ae7b150cc8b
+          test "$(git rev-parse HEAD)" = 3de9229eb2b4a357544ca3f3be9568c2b3bf64bb
           api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46042369932
           auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
           done_run=false
@@ -84,7 +84,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: pcg-stage33-measured-comparison
+          name: pcg-stage33-contour-comparison
           path: results
           if-no-files-found: error
           retention-days: 7
