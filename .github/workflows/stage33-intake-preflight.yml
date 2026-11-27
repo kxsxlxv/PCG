@@ -35,42 +35,43 @@ jobs:
             low=buildings_2012.zip
             high=a69803a3e1134ec7ba96398d19eb8ade.gltf
             win=$(wslpath -a -u "$1")
-            # Locate exact source names only, independently; do not enumerate
-            # personal directories. Verify against the original reference digests.
-            low_path=''; high_path=''
+            # Owner has staged the exact inputs here. Do not search other directories.
+            dir="$win/pcg-reference"
+            low_path="$dir/$low"; high_path="$dir/$high"
             low_hash=8082c844fd66ddcc1cd8606c55ab1dc74e02edc3977c662ed87f5beeeffbeb8e
             high_hash=85bd5d73832d0cc3e2f6f9cd429b32c05614ba4ab0ee549435c43950c6b7d7f0
-            match_file() {
-              [ -f "$1" ] && [ "$(sha256sum "$1" | cut -d' ' -f1)" = "$2" ]
-            }
-            for dir in "$HOME/pcg-reference" "$win/pcg-reference" "$win/Downloads"; do
-              if [ -z "$low_path" ] && match_file "$dir/$low" "$low_hash"; then low_path="$dir/$low"; fi
-              if [ -z "$high_path" ] && match_file "$dir/$high" "$high_hash"; then high_path="$dir/$high"; fi
-            done
-            # The project's designated donor library, not the general disk.
-            library=/mnt/d/Graphics/Assets
-            if [ -d "$library" ]; then
-              while IFS= read -r -d '' p; do
-                case "${p##*/}" in
-                  "$low") if [ -z "$low_path" ] && match_file "$p" "$low_hash"; then low_path="$p"; fi;;
-                  "$high") if [ -z "$high_path" ] && match_file "$p" "$high_hash"; then high_path="$p"; fi;;
-                esac
-                if [ -n "$low_path" ] && [ -n "$high_path" ]; then break; fi
-              done < <(find "$library" -type f \( -name "$low" -o -name "$high" \) -print0 2>/dev/null)
-            fi
-            if [ -n "$low_path" ]; then echo EXACT_LOW_SOURCE_AVAILABLE; else echo EXACT_LOW_SOURCE_NOT_FOUND; fi
-            if [ -n "$high_path" ]; then echo EXACT_HIGH_SOURCE_AVAILABLE; else echo EXACT_HIGH_SOURCE_NOT_FOUND; fi
-            if [ -z "$low_path" ] || [ -z "$high_path" ]; then
-              echo PRIVATE_SOURCE_GATE_BLOCKED
-              exit 0
-            fi
-            dest="$win/pcg-reference/stage33-catalog-$2"
-            mkdir -p "$win/pcg-reference"
-            if PCG_PRIVATE_LOCAL=1 ../venv/bin/python lab/reference_intake33.py --low "$low_path" --high "$high_path" --out "$dest" > "$win/pcg-reference/stage33-intake-$2.log" 2>&1; then
-              echo PRIVATE_SOURCE_INTAKE_PASS
-            else
-              echo PRIVATE_SOURCE_INTAKE_FAILED_SEE_LOCAL_LOG
+            test -f "$low_path" || { echo LOW_MISSING; exit 1; }
+            test -f "$high_path" || { echo HIGH_MISSING; exit 1; }
+            test "$(sha256sum "$low_path" | cut -d' ' -f1)" = "$low_hash" || { echo LOW_HASH_MISMATCH; exit 1; }
+            test "$(sha256sum "$high_path" | cut -d' ' -f1)" = "$high_hash" || { echo HIGH_HASH_MISMATCH; exit 1; }
+            echo BOTH_ORIGINALS_VERIFIED
+            dest="$dir/stage33-catalog-$2"
+            log="$dir/stage33-intake-$2.log"
+            if ! PCG_PRIVATE_LOCAL=1 ../venv/bin/python lab/reference_intake33.py --low "$low_path" --high "$high_path" --out "$dest" > "$log" 2>&1; then
+              echo PRIVATE_SOURCE_INTAKE_FAILED
+              ../venv/bin/python - "$log" <<'PY'
+            import re,sys
+            from pathlib import Path
+            t=Path(sys.argv[1]).read_text(errors='replace')
+            # Only known generic parser error categories, no filenames or source details.
+            categories=['no supported geometry','unsupported nontriangle mode','missing or escaping URI','meshopt compressed buffer unsupported','Draco unsupported','accessor bounds','invalid ring','no nondegenerate triangles','archive limit','duplicate archive entry']
+            print('INTAKE_ERROR_CATEGORY',next((x for x in categories if x in t),'other (private local log)'))
+            PY
               exit 1
             fi
+            ../venv/bin/python - "$dest/catalog.json" <<'PY'
+            import json,sys,statistics
+            from pathlib import Path
+            r=json.loads(Path(sys.argv[1]).read_text())
+            for key in ('low','high'):
+                a=[x for x in r['objects'] if x['source'].startswith(key)]
+                assert a
+                print('INTAKE_AGGREGATE',key,json.dumps(dict(groups=len(a),triangles=sum(x['triangles_input'] for x in a),median_triangles=statistics.median(x['triangles_input'] for x in a),degenerate=sum(x['degenerate'] for x in a),uv_triangles=sum(x['uv0_triangles'] for x in a),uv_nonzero=sum(x['uv0_nonzero_triangles'] for x in a),ground_outlines=sum(x['footprint_kind']=='near_ground_surface' for x in a))))
+            print('ATLAS_MAPS_PRESENT',len(r['external_unassigned_maps']))
+            for x in r['roughness_candidates']:
+                a=x['analysis']
+                print('ROUGHNESS_AGGREGATE',json.dumps({k:a[k] for k in ('width','height','dark_fraction','rectangular_candidates')}))
+            PY
+            echo PRIVATE_SOURCE_INTAKE_PASS
         run: |
           py -3 -u -c "import subprocess,sys,os; sys.exit(subprocess.run(['wsl.exe','--exec','bash','--noprofile','--norc','-s','--',os.environ['USERPROFILE'],os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']],input=os.environ['PCG_SCRIPT'].replace(chr(13), '').encode('utf-8'),timeout=660).returncode)"
