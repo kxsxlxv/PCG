@@ -1,0 +1,103 @@
+name: PCG Stage 33 PBR transfer and measured strips
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage33-pbr-transfer.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: src:lab
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      EGL_PLATFORM: surfaceless
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: afe607ff0196e57021e9e88bdf54bcf400d3337c
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch explicitly authorized original models and verify all hashes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = afe607ff0196e57021e9e88bdf54bcf400d3337c
+          api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46042369932
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          done_run=false
+          for i in $(seq 1 100); do
+            curl -fsS "${auth[@]}" "$api" -o "$RUNNER_TEMP/source.json"
+            if test "$(jq -r .status "$RUNNER_TEMP/source.json")" = completed; then
+              test "$(jq -r .conclusion "$RUNNER_TEMP/source.json")" = success
+              done_run=true; break
+            fi
+            sleep 5
+          done
+          test "$done_run" = true
+          curl -fsS "${auth[@]}" "$api/artifacts?name=pcg-stage33-authorized-donor-sources" -o "$RUNNER_TEMP/artifact.json"
+          test "$(jq -r '.artifacts | length' "$RUNNER_TEMP/artifact.json")" = 1
+          id=$(jq -r '.artifacts[0].id' "$RUNNER_TEMP/artifact.json")
+          digest=$(jq -r '.artifacts[0].digest' "$RUNNER_TEMP/artifact.json")
+          echo "DONOR_ARTIFACT $id $digest"
+          curl -fLsS --retry 2 "${auth[@]}" "https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/$id/zip" -o "$RUNNER_TEMP/donors.zip"
+          echo "${digest#sha256:}  $RUNNER_TEMP/donors.zip" | sha256sum -c
+          mkdir inputs
+          unzip -q "$RUNNER_TEMP/donors.zip" -d inputs
+          (cd inputs; sha256sum -c SHA256SUMS)
+          curl -fLsS --retry 2 "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15221985977/zip -o "$RUNNER_TEMP/reference.zip"
+          echo "51ebfc2b0561f3327be77da1566973cd27fef550b8808b3b915449c1b2b8d488  $RUNNER_TEMP/reference.zip" | sha256sum -c
+          mkdir reference
+          unzip -q "$RUNNER_TEMP/reference.zip" -d reference
+          python - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          p=Path('reference')
+          for n,h in json.loads((p/'bundle.json').read_text()).items(): assert hashlib.sha256((p/n).read_bytes()).hexdigest()==h,n
+          print('REFERENCE_138_FILES_VERIFIED')
+          q=json.loads(Path('inputs/analysis/catalog.json').read_text())
+          print('LOW_MATERIAL_INVENTORY',json.dumps([{'file':r['file'],'material_count':len(r['materials']),'image_count':len(r['images']),'bound_material_count':sum(bool(m['bindings']) for m in r['materials'])} for r in q['files'][:-1]]))
+          PY
+      - name: Install dependencies and run tests
+        run: |
+          python -m pip install -r lab/requirements.txt moderngl==5.12.0 glcontext==3.0.0
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libegl-dev libgl1 libgl1-mesa-dri
+          python -m unittest discover -s tests/unit -v
+      - name: Actual PBR transfer, GLB readback and matched views
+        run: |
+          python lab/reference_pbr33.py --high inputs/originals/a69803a3e1134ec7ba96398d19eb8ade.gltf --albedo inputs/originals/*_RBP_albedo.* --normal inputs/originals/*_RBP_normal.* --rough inputs/originals/*_RBP_roughness.* --reference reference --out results
+          python - <<'PY'
+          import base64,io,json,hashlib
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          root=Path('results')
+          report=json.loads((root/'report.json').read_text())
+          assert len(report['models'])==6
+          assert all(m['triangles']<=1800 for m in report['models'])
+          for p in sorted(root.glob('*_pbr_comparison.png')):
+              im=Image.open(p).convert('RGB');im.thumbnail((1100,1100))
+              b=io.BytesIO();im.save(b,format='JPEG',quality=78,optimize=True)
+              s=base64.b64encode(b.getvalue()).decode()
+              print('PBR33_IMAGE_BEGIN',p.stem,len(s),flush=True)
+              for i in range(0,len(s),2048):print('PBR33_IMAGE_CHUNK',p.stem,s[i:i+2048],flush=True)
+              print('PBR33_IMAGE_END',p.stem,flush=True)
+          manifest={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.iterdir()) if p.is_file()}
+          (root/'bundle.json').write_text(json.dumps(manifest,indent=2))
+          print('PBR33_BUNDLE',len(manifest))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage33-pbr-transfer
+          path: results
+          if-no-files-found: error
+          retention-days: 7
