@@ -15,3 +15,12 @@ class Low33Tests(unittest.TestCase):
         r=material(G(),0)
         self.assertEqual(r['bindings'],dict(basecolor=False,normal=False,metallic_roughness=False))
         self.assertEqual(int(r['maps'][2][0,0,1]),127)
+
+    def test_basecolor_normal_alias(self):
+        from unittest.mock import patch
+        class G:
+            doc={'textures':[{'source':0}],'materials':[{'pbrMetallicRoughness':{'baseColorTexture':{'index':0}},'normalTexture':{'index':0}}]}
+        with patch('reference_low33.image',return_value=np.full((4,4,4),80,np.uint8)):
+            r=material(G(),0)
+        self.assertTrue(r['normal_alias']);self.assertFalse(r['normal_used'])
+        np.testing.assert_array_equal(r['maps'][1][0,0],[128,128,255])

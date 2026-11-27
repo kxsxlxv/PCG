@@ -33,6 +33,10 @@ def material(g,i):
         return image(g,t['source']),tuple(w==10497 for w in wraps)
     a,aw=tex(p.get('baseColorTexture'));n,nw=tex(q.get('normalTexture'));r,rw=tex(p.get('metallicRoughnessTexture'))
     bindings=dict(basecolor=a is not None,normal=n is not None,metallic_roughness=r is not None)
+    def source(info):return g.doc['textures'][info['index']]['source'] if info else None
+    ai=source(p.get('baseColorTexture'));ni=source(q.get('normalTexture'))
+    normal_alias=ai is not None and ai==ni
+    if normal_alias:n=None;nw=(False,False)
     if a is None:a=np.full((2,2,4),255,np.uint8)
     factor=np.array(p.get('baseColorFactor',[1,1,1,1]))
     a=a.copy();a[:,:,:3]=np.clip(a[:,:,:3]*factor[:3]**(1/2.2),0,255).astype(np.uint8);a[:,:,3]=np.clip(a[:,:,3]*factor[3],0,255).astype(np.uint8)
@@ -44,7 +48,7 @@ def material(g,i):
     if r is None:r=np.full((2,2,3),255,np.uint8)
     else:r=r[:,:,:3].copy()
     r[:,:,0]=255;r[:,:,1]=np.clip(r[:,:,1]*rough,0,255).astype(np.uint8);r[:,:,2]=0
-    return dict(maps=[a,n,r],wrap=[aw,nw,rw],alpha_cut=float(q.get('alphaCutoff',.5)) if mode=='MASK' else -1.,bindings=bindings,alpha_mode=mode,metallic_ignored=float(p.get('metallicFactor',1.)))
+    return dict(maps=[a,n,r],wrap=[aw,nw,rw],alpha_cut=float(q.get('alphaCutoff',.5)) if mode=='MASK' else -1.,bindings=bindings,normal_alias=normal_alias,normal_used=bindings['normal'] and not normal_alias,alpha_mode=mode,metallic_ignored=float(p.get('metallicFactor',1.)))
 
 class NativeRenderer(BakeRenderer):
     def __init__(self):
@@ -120,13 +124,13 @@ def run(args):
                     a=A[:,:,3]>0;b=B[:,:,3]>0;m=a&b
                     scores.append(dict(iou=float(m.sum()/max(1,(a|b).sum())),rgb_mae=float(np.abs(A[:,:,:3].astype(float)-B[:,:,:3])[m].mean()/255) if m.any() else 1.))
                     for l,im in enumerate((A,B)):
-                        sheet.paste(Image.fromarray(im).convert('RGB'),(l*res[0],v*(res[1]+35)));d.text((l*res[0]+10,v*(res[1]+35)+res[1]+7),('Native embedded materials' if l==0 else 'Independent shell / baked native material')+f' | view {v+1}',fill='black')
+                        sheet.paste(Image.fromarray(im).convert('RGB'),(l*res[0],v*(res[1]+35)));d.text((l*res[0]+10,v*(res[1]+35)+res[1]+7),('Native bindings / invalid normal alias disabled' if l==0 else 'Independent shell / baked native material')+f' | view {v+1}',fill='black')
                 sheet.save(out/(k+'_native_comparison.png'))
-                results.append(dict(id=k,source_triangles=len(t),triangles=len(shell),scores=scores,coverage=meta['projection_sample_coverage'],materials=[dict(id=m,**{x:cache[m][x] for x in ('bindings','alpha_mode','metallic_ignored')}) for m in ix]))
+                results.append(dict(id=k,source_triangles=len(t),triangles=len(shell),scores=scores,coverage=meta['projection_sample_coverage'],materials=[dict(id=m,**{x:cache[m][x] for x in ('bindings','normal_alias','normal_used','alpha_mode','metallic_ignored')}) for m in ix]))
             inventory.append(dict(file=path.name,materials=len(g.materials),images=len(g.images),decoded=sum(x['decoded'] for x in g.images)))
     assert len(results)+len(skipped)==len(selected)
     assert len(results)>=4
-    report=dict(models=results,skipped=skipped,inventory=inventory,limitations=['Native texture bindings and UV0 used; absent normal or roughness textures use neutral or factor-only material.','Metallic, occlusion and blend materials not reproduced by diagnostic lighting.','Directional projection can smear occluded surfaces; not shared module library.','Only six matched samples, not all low-poly objects.'])
+    report=dict(models=results,skipped=skipped,inventory=inventory,limitations=['Native texture bindings and UV0 used; aliased basecolor-as-normal and absent normal maps use neutral normals. Roughness is factor-only when unbound.','Metallic, occlusion and blend materials not reproduced by diagnostic lighting.','Directional projection can smear occluded surfaces; not shared module library.','Only six matched samples, not all low-poly objects.'])
     dump(out/'report.json',report);print('LOW33_RESULT',json.dumps(report),flush=True)
 
 if __name__=='__main__':
