@@ -35,15 +35,25 @@ jobs:
             low=buildings_2012.zip
             high=a69803a3e1134ec7ba96398d19eb8ade.gltf
             win=$(wslpath -a -u "$1")
-            # Owner has staged the exact inputs here. Do not search other directories.
-            dir="$win/pcg-reference"
-            low_path="$dir/$low"; high_path="$dir/$high"
+            # Only the explicitly staged reference directory in each profile.
+            # The Windows runner may execute as a different account.
             low_hash=8082c844fd66ddcc1cd8606c55ab1dc74e02edc3977c662ed87f5beeeffbeb8e
             high_hash=85bd5d73832d0cc3e2f6f9cd429b32c05614ba4ab0ee549435c43950c6b7d7f0
-            test -f "$low_path" || { echo LOW_MISSING; exit 1; }
-            test -f "$high_path" || { echo HIGH_MISSING; exit 1; }
-            test "$(sha256sum "$low_path" | cut -d' ' -f1)" = "$low_hash" || { echo LOW_HASH_MISMATCH; exit 1; }
-            test "$(sha256sum "$high_path" | cut -d' ' -f1)" = "$high_hash" || { echo HIGH_HASH_MISMATCH; exit 1; }
+            dir=''; folders=0; low_found=0; high_found=0
+            for candidate in "$win/pcg-reference" /mnt/c/Users/*/pcg-reference; do
+              [ -d "$candidate" ] || continue
+              folders=$((folders+1))
+              if [ -f "$candidate/$low" ]; then low_found=1; fi
+              if [ -f "$candidate/$high" ]; then high_found=1; fi
+              if [ -f "$candidate/$low" ] && [ -f "$candidate/$high" ] &&
+                 [ "$(sha256sum "$candidate/$low" | cut -d' ' -f1)" = "$low_hash" ] &&
+                 [ "$(sha256sum "$candidate/$high" | cut -d' ' -f1)" = "$high_hash" ]; then
+                dir="$candidate"; break
+              fi
+            done
+            echo STAGING_FOLDER_COUNT "$folders" LOW_NAME_PRESENT "$low_found" HIGH_NAME_PRESENT "$high_found"
+            test -n "$dir" || { echo EXACT_SOURCE_PAIR_NOT_FOUND; exit 1; }
+            low_path="$dir/$low"; high_path="$dir/$high"
             echo BOTH_ORIGINALS_VERIFIED
             dest="$dir/stage33-catalog-$2"
             log="$dir/stage33-intake-$2.log"
