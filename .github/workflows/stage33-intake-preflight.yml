@@ -1,0 +1,55 @@
+name: PCG Stage 33 private intake preflight
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage33-intake-preflight.yml
+permissions: {}
+jobs:
+  preflight:
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke' && github.event_name == 'push'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 12
+    steps:
+      - name: Synthetic tests and optional private local intake
+        shell: cmd
+        env:
+          PCG_SCRIPT: |
+            set -euo pipefail
+            export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_TERMINAL_PROMPT=0
+            export PYTHONHASHSEED=0 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1
+            work=$(mktemp -d -t pcg-stage33.XXXXXXXX)
+            trap 'rm -rf -- "$work"' EXIT
+            cd "$work"
+            python3 -m venv venv
+            git init -q src
+            cd src
+            git -c core.hooksPath=/dev/null fetch --quiet --depth=1 https://github.com/kxsxlxv/PCG.git 5665446a863fe67730e06cbc6b06cdfa937a49ff
+            git -c core.hooksPath=/dev/null checkout --quiet --detach FETCH_HEAD
+            test "$(git rev-parse HEAD)" = 5665446a863fe67730e06cbc6b06cdfa937a49ff
+            ../venv/bin/python -m pip --isolated --disable-pip-version-check install --index-url https://pypi.org/simple --no-cache-dir -r lab/requirements.txt
+            export PYTHONPATH=src:lab
+            ../venv/bin/python -m unittest discover -s tests/unit -v
+            echo STAGE33_SYNTHETIC_PASS
+            low=buildings_2012.zip
+            high=a69803a3e1134ec7ba96398d19eb8ade.gltf
+            win=$(wslpath -a -u "$1")
+            # Only exact user-provided filenames in two designated directories.
+            # No recursive search or listing of personal directories.
+            for dir in "$HOME/pcg-reference" "$win/pcg-reference" "$win/Downloads"; do
+              if [ -f "$dir/$low" ] && [ -f "$dir/$high" ]; then
+                dest="$win/pcg-reference/stage33-catalog-$2"
+                mkdir -p "$win/pcg-reference"
+                if PCG_PRIVATE_LOCAL=1 ../venv/bin/python lab/reference_intake33.py --low "$dir/$low" --high "$dir/$high" --out "$dest" > "$win/pcg-reference/stage33-intake-$2.log" 2>&1; then
+                  echo PRIVATE_SOURCE_INTAKE_PASS
+                else
+                  echo PRIVATE_SOURCE_INTAKE_FAILED_SEE_LOCAL_LOG
+                  exit 1
+                fi
+                exit 0
+              fi
+            done
+            echo PRIVATE_SOURCES_NOT_PRESENT_TOGETHER
+        run: |
+          py -3 -u -c "import subprocess,sys,os; sys.exit(subprocess.run(['wsl.exe','--exec','bash','--noprofile','--norc','-s','--',os.environ['USERPROFILE'],os.environ['GITHUB_RUN_ID']+'-'+os.environ['GITHUB_RUN_ATTEMPT']],input=os.environ['PCG_SCRIPT'].replace(chr(13), '').encode('utf-8'),timeout=660).returncode)"
