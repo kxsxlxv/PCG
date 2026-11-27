@@ -41,7 +41,7 @@ jobs:
           }
           get_artifact 46042369932 pcg-stage33-authorized-donor-sources source
           get_artifact 46045705999 pcg-stage33-pbr-transfer high
-          get_artifact 46046335925 pcg-stage33-native-low low
+          get_artifact 46046899509 pcg-stage33-native-low-corrected low
           get_artifact 46046546388 pcg-stage33-coherent-atlas shared
           python - <<'PY'
           import hashlib,json,os,zipfile,struct,statistics
@@ -80,6 +80,9 @@ jobs:
                       assert report['single_material'] and report['stress_cases']==128 and report['stress_max_triangles']<=1800
                       print('SHARED_FINAL_AUDIT',json.dumps(dict(files=len(manifest),glbs=len(glbs),modules=report['modules'],families=report['families'],buildings=len(report['buildings']),stress_max=report['stress_max_triangles'],entries=sum(x['authored_entries'] for x in report['buildings']),stacks=sum(x['column_stacks'] for x in report['buildings']))))
                   else:
+                      if name=='low':
+                          assert all(not m['normal_used'] for r in report['models'] for m in r['materials'] if m['normal_alias'])
+                          print('LOW_ALIAS_DISABLED',sum(m['normal_alias'] for r in report['models'] for m in r['materials']))
                       print('MATCH_FINAL_AUDIT',name,json.dumps(dict(files=len(manifest),glbs=len(glbs),models=len(report['models']),mean_iou=statistics.mean(s['iou'] for r in report['models'] for s in r['scores']),mean_rgb_mae=statistics.mean(s['rgb_mae'] for r in report['models'] for s in r['scores']))))
           print('STAGE33_MATERIAL_FILES_VERIFIED',total)
           PY
