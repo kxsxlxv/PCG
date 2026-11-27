@@ -1,0 +1,41 @@
+name: PCG Stage 33 final donor comparison audit
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage33-final-audit.yml
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Download exact successful CI artifact and verify all files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46044003324
+          curl -fsS "${auth[@]}" "$api" -o "$RUNNER_TEMP/source.json"
+          test "$(jq -r .conclusion "$RUNNER_TEMP/source.json")" = success
+          curl -fsS "${auth[@]}" "$api/artifacts?name=pcg-stage33-supported-contour-comparison" -o "$RUNNER_TEMP/artifact.json"
+          test "$(jq -r '.artifacts[0].id' "$RUNNER_TEMP/artifact.json")" = 15221985977
+          curl -fLsS "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15221985977/zip -o "$RUNNER_TEMP/result.zip"
+          echo "51ebfc2b0561f3327be77da1566973cd27fef550b8808b3b915449c1b2b8d488  $RUNNER_TEMP/result.zip" | sha256sum -c
+          python - <<'PY'
+          import hashlib,json,os,zipfile,statistics
+          from pathlib import Path
+          with zipfile.ZipFile(Path(os.environ['RUNNER_TEMP'])/'result.zip') as z:
+              m=json.loads(z.read('bundle.json'))
+              for p,h in m.items():assert hashlib.sha256(z.read(p)).hexdigest()==h,p
+              r=json.loads(z.read('report.json'))
+              assert r['groups']==101 and len(r['comparisons'])==12
+              print('FINAL33_VERIFIED',len(m), 'models',r['groups'],'views',2*len(r['comparisons']))
+              for key in ('low','high'):
+                  a=[x for x in r['comparisons'] if x['pack']==key]
+                  print('FINAL33_PACK',key,json.dumps(dict(mean_iou=statistics.mean(v for x in a for v in x['silhouette_iou']),minimum_iou=min(v for x in a for v in x['silhouette_iou']),source_triangles=sum(x['source_triangles'] for x in a),generated_triangles=sum(x['grammar_triangles'] for x in a))))
+          PY
