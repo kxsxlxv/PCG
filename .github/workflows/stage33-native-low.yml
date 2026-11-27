@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: eb3d25dc54d6c131677d47380d2db4d47f115844
+          ref: e282686894246541333e5a09876ef836be8e873c
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = eb3d25dc54d6c131677d47380d2db4d47f115844
+          test "$(git rev-parse HEAD)" = e282686894246541333e5a09876ef836be8e873c
           api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46042369932
           auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
           done_run=false
@@ -84,6 +84,7 @@ jobs:
           report=json.loads((root/'report.json').read_text())
           assert len(report['models'])+len(report['skipped'])==6
           assert len(report['models'])>=4
+          assert all(not m['normal_used'] for r in report['models'] for m in r['materials'] if m['normal_alias'])
           for p in sorted(root.glob('*_native_comparison.png')):
               im=Image.open(p).convert('RGB');im.thumbnail((1100,1100))
               b=io.BytesIO();im.save(b,format='JPEG',quality=78,optimize=True)
@@ -97,7 +98,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: pcg-stage33-native-low
+          name: pcg-stage33-native-low-corrected
           path: results
           if-no-files-found: error
           retention-days: 7
