@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 3de9229eb2b4a357544ca3f3be9568c2b3bf64bb
+          ref: 56115c09514275c32d1555d3538c17661e3ccb6e
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 3de9229eb2b4a357544ca3f3be9568c2b3bf64bb
+          test "$(git rev-parse HEAD)" = 56115c09514275c32d1555d3538c17661e3ccb6e
           api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46042369932
           auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
           done_run=false
@@ -71,7 +71,7 @@ jobs:
           report=json.loads((root/'report.json').read_text())
           assert report['groups']==101
           assert len(report['comparisons'])>=8
-          for p in sorted(root.glob('*_comparison.png')):
+          for p in sorted(root.glob('*_comparison.png'))+sorted(root.glob('*_provisional_albedo.png')):
               im=Image.open(p).convert('RGB');im.thumbnail((1100,1100))
               b=io.BytesIO();im.save(b,format='JPEG',quality=78,optimize=True)
               s=base64.b64encode(b.getvalue()).decode()
@@ -84,7 +84,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: pcg-stage33-contour-comparison
+          name: pcg-stage33-supported-contour-comparison
           path: results
           if-no-files-found: error
           retention-days: 7
