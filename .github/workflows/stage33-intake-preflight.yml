@@ -25,9 +25,9 @@ jobs:
             python3 -m venv venv
             git init -q src
             cd src
-            git -c core.hooksPath=/dev/null fetch --quiet --depth=1 https://github.com/kxsxlxv/PCG.git 5665446a863fe67730e06cbc6b06cdfa937a49ff
+            git -c core.hooksPath=/dev/null fetch --quiet --depth=1 https://github.com/kxsxlxv/PCG.git ab608e8829daa3e70931edd8599b200e520be6fd
             git -c core.hooksPath=/dev/null checkout --quiet --detach FETCH_HEAD
-            test "$(git rev-parse HEAD)" = 5665446a863fe67730e06cbc6b06cdfa937a49ff
+            test "$(git rev-parse HEAD)" = ab608e8829daa3e70931edd8599b200e520be6fd
             ../venv/bin/python -m pip --isolated --disable-pip-version-check install --index-url https://pypi.org/simple --no-cache-dir -r lab/requirements.txt
             export PYTHONPATH=src:lab
             ../venv/bin/python -m unittest discover -s tests/unit -v
