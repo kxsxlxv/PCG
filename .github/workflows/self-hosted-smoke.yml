@@ -1,0 +1,29 @@
+name: PCG self-hosted runner smoke
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/self-hosted-smoke.yml
+  workflow_dispatch:
+permissions: {}
+jobs:
+  smoke:
+    runs-on: [self-hosted, Windows, X64]
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke'
+    timeout-minutes: 3
+    steps:
+      - name: Verify runner and tool availability (read-only)
+        shell: powershell
+        env:
+          ACTUAL_RUNNER_NAME: ${{ runner.name }}
+          ACTUAL_RUNNER_OS: ${{ runner.os }}
+          ACTUAL_RUNNER_ARCH: ${{ runner.arch }}
+        run: |
+          Write-Host "Runner: $env:ACTUAL_RUNNER_NAME ($env:ACTUAL_RUNNER_OS/$env:ACTUAL_RUNNER_ARCH)"
+          if ($env:ACTUAL_RUNNER_NAME -ne 'DESKTOP-UM6MS08') { throw 'Unexpected runner name' }
+          foreach ($tool in @('python','py','git','node','g++','wsl','docker')) {
+            $cmd = Get-Command $tool -ErrorAction SilentlyContinue
+            Write-Host "$tool available: $([bool]$cmd)"
+          }
+          Write-Host 'RUNNER_SMOKE_PASS'
