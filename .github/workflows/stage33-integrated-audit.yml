@@ -1,0 +1,81 @@
+name: PCG Stage 33 integrated overlay independent audit
+on:
+  push:
+    branches: [research/self-hosted-runner-smoke]
+    paths: [.github/workflows/stage33-integrated-audit.yml]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Fetch exact successful result and accepted Stage32 comparison
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          api=https://api.github.com/repos/kxsxlxv/PCG
+          ok=false
+          for i in $(seq 1 100); do
+            curl -fsS "${auth[@]}" "$api/actions/runs/46082593075" -o "$RUNNER_TEMP/run.json"
+            test "$(jq -r .head_sha "$RUNNER_TEMP/run.json")" = 5a5330a5cc51c2a1a1a218924329518a1fc48eee
+            if test "$(jq -r .status "$RUNNER_TEMP/run.json")" = completed; then
+              test "$(jq -r .conclusion "$RUNNER_TEMP/run.json")" = success
+              ok=true; break
+            fi
+            sleep 5
+          done
+          test "$ok" = true
+          curl -fsS "${auth[@]}" "$api/actions/runs/46082593075/artifacts?name=pcg-stage33-integrated-overlay" -o "$RUNNER_TEMP/art.json"
+          test "$(jq -r '.artifacts | length' "$RUNNER_TEMP/art.json")" = 1
+          id=$(jq -r '.artifacts[0].id' "$RUNNER_TEMP/art.json")
+          digest=$(jq -r '.artifacts[0].digest' "$RUNNER_TEMP/art.json")
+          echo "FINAL33_ARTIFACT $id $digest"
+          curl -fLsS --retry 2 "${auth[@]}" "$api/actions/artifacts/$id/zip" -o "$RUNNER_TEMP/result.zip"
+          echo "${digest#sha256:}  $RUNNER_TEMP/result.zip" | sha256sum -c
+          curl -fLsS --retry 2 "${auth[@]}" "$api/actions/artifacts/15210528198/zip" -o "$RUNNER_TEMP/stage32.zip"
+          echo "a1754547788b4a503b59ba00647a912fd51672ad0b5e8cdda654b618d2200747  $RUNNER_TEMP/stage32.zip" | sha256sum -c
+      - name: Install audit dependencies
+        run: python -m pip install numpy Pillow
+      - name: Verify both manifests and compare raw geometry, openings and baseline images
+        run: |
+          python - <<'PY'
+          import hashlib,io,json,os,zipfile
+          from pathlib import Path
+          import numpy as np
+          from PIL import Image
+          root=Path(os.environ['RUNNER_TEMP'])
+          with zipfile.ZipFile(root/'result.zip') as a,zipfile.ZipFile(root/'stage32.zip') as b:
+              ma=json.loads(a.read('bundle.json'));mb=json.loads(b.read('bundle.json'))
+              for z,m in ((a,ma),(b,mb)):
+                  for name,h in m.items():assert hashlib.sha256(z.read(name)).hexdigest()==h,name
+              r=json.loads(a.read('report.json'));old=json.loads(b.read('report.json'))
+              assert r['near_total']==old['near_total'] and r['lite_total']==old['lite_total']
+              assert r['extra_triangles']==0 and len(r['cases'])==16
+              count=0;slots=0;layers=json.loads(a.read('donor_layers.json'))
+              for i in range(2):
+                  for name in ('tile_opaque.glb','tile_lite_opaque.glb','roof_balcony_cutout.glb','antenna_cutout.glb','facade_params.bin','facade_cells.bin','gpu_metadata.npz','parameters.json','plans.json','placements.json','cutout_records.json'):
+                      assert ma[f'tile_{i}/{name}']==mb[f'grammar_{i}/{name}'],name
+                      count+=1
+                  with np.load(io.BytesIO(a.read(f'tile_{i}/gpu_metadata.npz'))) as z:ops=z['openings']
+                  with np.load(io.BytesIO(a.read(f'tile_{i}/donor_opening_sidecar.npz'))) as z:ext=z['openings']
+                  np.testing.assert_array_equal(ext[:,:3],ops)
+                  k=ext[:,3,0]>0
+                  assert np.all(ops[k,2,0]==1) and np.all(ops[k,2,1]==0)
+                  assert np.all(ext[k,3,0]>layers['base']) and np.all(ext[k,3,0]<=layers['base']+len(layers['layers']))
+                  slots+=int(k.sum())
+              assert slots==sum(x['windows'] for x in r['assignments'])
+              rows=[]
+              for row in r['cases']:
+                  k=row['id'];x=np.asarray(Image.open(io.BytesIO(a.read(k+'_32.png'))).convert('RGB')).astype(np.int16)
+                  y=np.asarray(Image.open(io.BytesIO(b.read(k+'_grammar.png'))).convert('RGB')).astype(np.int16)
+                  diff=np.abs(x-y)
+                  rows.append(dict(id=k,rgb_mae=float(diff.mean()/255),max_channel_delta=int(diff.max()),changed_pixels=int(np.any(diff,axis=2).sum())))
+              assert max(x['rgb_mae'] for x in rows)<.0025,rows
+              report=dict(verified_result_files=len(ma),verified_stage32_files=len(mb),identical_geometry_and_metadata_files=count,assigned_windows=slots,
+                  baseline_exact_images=sum(x['max_channel_delta']==0 for x in rows),baseline_max_rgb_mae=max(x['rgb_mae'] for x in rows),baseline_images=rows)
+              print('INTEGRATED33_FINAL_AUDIT',json.dumps(report))
+          PY
