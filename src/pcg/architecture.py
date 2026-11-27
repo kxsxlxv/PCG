@@ -94,10 +94,12 @@ class ArchitecturePlan:
         return hashlib.sha256(self.canonical().encode()).hexdigest()
 
 
-def plan_facades(f:Footprint,eave_m,levels,profile:Profile,*,party_edges=(),entrance_edge=None):
+def plan_facades(f:Footprint,eave_m,levels,profile:Profile,*,party_edges=(),entrance_edge=None,slot_policy=None):
     """Party edges and entrance refer to (canonical ring index, edge index).
     A suppressed party edge is entire facade, not automatic GIS adjacency.
     The door retains a positive threshold to keep its aperture inside the wall.
+    Optional slot_policy(r,i,floor,bay,count,length) returns window, balcony or blank.
+    It may suppress a regular cell but never bypass canonical fit/exclusion checks.
     """
     h=number(eave_m,"eave_m")
     if h<=0 or type(levels) is not int or not 1<=levels<=200:
@@ -138,13 +140,21 @@ def plan_facades(f:Footprint,eave_m,levels,profile:Profile,*,party_edges=(),entr
                         u=center-profile.window_width/2
                         if floor==0 and door and u<door.u+door.width+clearance and u+profile.window_width>door.u-clearance:
                             continue
+                        choice=(slot_policy(r,i,floor,bay,len(centers),length)
+                                if slot_policy is not None else
+                                "balcony" if profile.id=="apartments" and r==0 and floor>0 else "window")
+                        if choice not in ("window","balcony","blank"):
+                            raise ValueError("invalid slot policy")
+                        if choice=="blank":continue
+                        if choice=="balcony" and (profile.id!="apartments" or r!=0 or floor==0):
+                            raise ValueError("invalid balcony slot")
                         role="window"
                         bottom=floors[floor]+profile.sill
                         height=profile.window_height
                         # Select the access opening and balcony together. An
                         # infeasible balcony leaves an ordinary window, never
                         # an unguarded elevated door.
-                        if profile.id=="apartments" and r==0 and floor>0:
+                        if choice=="balcony":
                             reason="balcony_fit"
                             width=profile.window_width+BALCONY_WIDTH_EXTRA
                             left,right=center-width/2,center+width/2

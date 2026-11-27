@@ -137,6 +137,10 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/material_lab/gpu_lab.py --materials artifacts/l4-material-uv
+      - name: Regional archetypes and coherent architectural variation
+        env:
+          PYTHONPATH: src
+        run: python lab/zero_archetypes.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src

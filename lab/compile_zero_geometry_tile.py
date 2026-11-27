@@ -104,16 +104,27 @@ def compile_scene(cases,audit_samples=4096):
     table=[];cells=[];records=[];groups={role:{k:[] for k in ("v","n","uv0","uv1","color","f")} for role in GROUPS}
     for i,c in enumerate(sorted(cases,key=lambda a:a["id"])):
         f=Footprint(c.get("building_id","fixture:"+c["id"]),c["outer"],c.get("holes",[]))
-        profile=PROFILES[c.get("profile",("house","apartments","office")[i%3])]
-        floors=c.get("floors",2+i%3);h=c.get("eave_m",floors*(3.2 if profile.id=="office" else 3.))
-        mass=build_massing(f,h,c["roof"],c.get("rise",0.))
+        variant=c.get("variant")
+        if variant is None:
+            profile=PROFILES[c.get("profile",("house","apartments","office")[i%3])]
+            floors=c.get("floors",2+i%3);h=c.get("eave_m",floors*(3.2 if profile.id=="office" else 3.))
+            mass=build_massing(f,h,c["roof"],c.get("rise",0.))
+        else:
+            profile=variant.plan.profile;floors=len(variant.plan.floor_levels)-1
+            h=variant.eave_m;mass=variant.mass
+            if variant.plan.footprint_digest!=f.digest() or mass.shell.building_id!=f.building_id:
+                raise ValueError("variant footprint mismatch")
+            if (profile.id,floors,h,mass.actual_roof)!=(c["profile"],c["floors"],c["eave_m"],c["roof"]):
+                raise ValueError("inconsistent variant case")
+            if not np.isclose(variant.top_m,h+c.get("rise",0.),rtol=0,atol=1e-8):
+                raise ValueError("inconsistent variant height")
         if "fallback" in c:assert bool(mass.fallback_reason)==bool(c["fallback"]),c["id"]
         shell=mass.shell
         v=np.asarray(shell.vertices,dtype=np.float64)
         welded=trimesh.Trimesh(vertices=v,faces=[t for _,t in shell.triangles()],process=False)
         assert welded.is_watertight and welded.is_winding_consistent and welded.volume>0
         party=tuple(tuple(e) for e in c.get("party_edges",((0,1),) if c["id"]=="L" else ()))
-        plan=plan_facades(f,h,floors,profile,party_edges=party)
+        plan=variant.plan if variant is not None else plan_facades(f,h,floors,profile,party_edges=party)
         intents={x.opening_id:x for x in plan_night(plan)}
         offset=np.asarray(c.get("offset",[(i%4)*24.,(i//4)*24.,0.]),dtype=np.float64)
         assert offset.shape==(3,) and np.isfinite(offset).all()
@@ -128,6 +139,7 @@ def compile_scene(cases,audit_samples=4096):
                "seed":ref.seed(s.id),"family":resolve_material(profile.id,s.role).id,
                "height":h,"floors":floors}
             if s.role=="wall":
+                if variant is not None:r["family"]=variant.archetype.wall
                 found=[a for a in plan.facades if np.allclose(p[0,:2],a.start,atol=1e-9,rtol=0) and np.allclose(p[1,:2],a.end,atol=1e-9,rtol=0)]
                 assert len(found)==1,(c["id"],s.id)
                 facade=found[0];assert facade.id not in matched;matched.add(facade.id)
@@ -136,7 +148,8 @@ def compile_scene(cases,audit_samples=4096):
                 layout=np.column_stack(((p[:,:2]-facade.start)@direction,p[:,2]))
             else:
                 if s.role=="roof":
-                    if mass.actual_roof!="flat":r["family"]="ceramic_roof"
+                    if mass.actual_roof!="flat":
+                        r["family"]="ceramic_roof" if variant is None or variant.archetype.pitched_material=="bitumen_roof" else variant.archetype.pitched_material
                     roof.extend(Polygon(p[t,:2]) for t in tris)
                 tangent=np.cross([0.,0.,1.],n)
                 if np.linalg.norm(tangent)<1e-10:tangent=np.array([1.,0.,0.])-n*n[0]
