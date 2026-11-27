@@ -5,6 +5,12 @@ float phNoise(vec2 p,float seed){
     vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);float k=i.x*127.1+i.y*311.7+seed*3.17;
     return mix(mix(phHash(k),phHash(k+127.1),f.x),mix(phHash(k+311.7),phHash(k+438.8),f.x),f.y);
 }
+#ifdef PCG_NATURAL
+// PCG_NATURAL_INCLUDE
+#define phMaterial n28Material
+#else
+#define phMaterial mat
+#endif
 bool phContains(vec2 s,vec4 r){return all(greaterThanEqual(s,r.xy))&&all(lessThan(s,r.zw));}
 vec2 phWeights(float nv,float f0,float trans){
     float f=f0+(1.-f0)*pow(1.-clamp(nv,0.,1.),5.);float r=2.*f/(1.+f);
@@ -12,6 +18,9 @@ vec2 phWeights(float nv,float f0,float trans){
 }
 vec3 phGlassProfile(int typ){return typ==2?vec3(.115,.36,.105):typ==1?vec3(.055,.60,.145):vec3(.043,.76,.115);}
 vec3 phReflect(vec3 n,vec3 v,float rough){
+#ifdef PCG_NATURAL
+    return n28Reflect(n,v,rough);
+#else
     vec3 d=reflect(-v,n);vec3 c=env(d,rough);
     // Shared distant horizon proxy only (not real reflections of the test scene).
     // Continuous world direction, no per-window pseudo-random reflection map.
@@ -19,6 +28,7 @@ vec3 phReflect(vec3 n,vec3 v,float rough){
     float horizon=(1.-smoothstep(z-.035-rough*.15,z+.035+rough*.15,d.z))*smoothstep(-.30,-.04,d.z);
     c=mix(c,vec3(.16,.21,.23),horizon*.65);
     c*=vec3(.91,.97,1.04);return c*(night>.5?.055:1.);
+#endif
 }
 vec3 phGlass(vec3 interior,vec3 n,vec3 v,int typ,float rough,float dirt){
     vec3 g=phGlassProfile(typ);vec2 w=phWeights(max(dot(n,v),0.),g.x,g.y);
@@ -34,6 +44,9 @@ void phBox(vec3 p,vec3 d,vec3 lo,vec3 hi,vec3 albedo,inout float best,inout vec3
     if(t>=0.&&t<=e&&t<best){best=t;float top=float(abs(t-L.y)<.0001);c=albedo*(.75+.25*top);}
 }
 vec3 phInterior(vec2 q,vec2 ratio,vec2 aperture,float sill,float key,int semantic){
+#ifdef PCG_NATURAL
+    return n28Interior(q,ratio,aperture,sill,key,semantic);
+#else
     // Room origin and dimensions are metric, not texture UVs stretched to each pane.
     float W=max(3.0,aperture.x+.85),H=max(2.72,aperture.y+sill+.32),D=semantic==2?5.4:semantic==1?4.6:3.7;
     vec3 p=vec3((W-aperture.x)*.5+q.x*aperture.x,sill+q.y*aperture.y,.015);
@@ -82,12 +95,17 @@ vec3 phInterior(vec2 q,vec2 ratio,vec2 aperture,float sill,float key,int semanti
     }
     if(semantic==1&&phHash(key+51.)>.69){float slat=smoothstep(.18,.37,fract(p.y/.079));c=mix(c,vec3(.39,.40,.38)*(.72+.28*slat),.78);}
     return c;
+#endif
 }
 vec3 phRoomLight(vec3 c,float state,int semantic){
     if(night<.5)return c*(semantic==2?.40:semantic==1?.23:.26);
     if(state<1.5)return c*.012;
     vec3 light=state<2.5?vec3(1.38,.86,.48):vec3(.91,1.02,1.11);
+#ifdef PCG_NATURAL
+    return c*light*(semantic==2?1.10:semantic==1?1.22:1.52);
+#else
     return c*light*(semantic==2?1.32:semantic==1?1.05:1.18);
+#endif
 }
 vec3 phEntry(vec2 q,vec2 size,int id,int role,vec3 p,vec3 t,vec3 up,vec3 n,vec3 v,float direct){
     vec3 base=M(id,13).xyz;int variant=int(M(id,10).z);vec2 m=q*size;
@@ -157,15 +175,27 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
     float clearance=min(phRectDistance(s,en),min(phRectDistance(s,rect),phRectDistance(s,other)));
     // At floor/bay seams also check adjacent apertures; never paint a joint
     // through an enlarged paired block, its reveal clearance or entrance.
+#ifdef PCG_NATURAL
+    if(bays>0&&(style==4||pixelsPerMeter>24.)){for(int fy=-1;fy<=1;fy++){for(int bx=-1;bx<=1;bx++){
+#else
     if(bays>0){for(int fy=-1;fy<=1;fy++){for(int bx=-1;bx<=1;bx++){
+#endif
         int f=floorId+fy,j=bay+bx;if(f<0||f>=floors||j<0||j>=bays||((fy==0)&&(bx==0)))continue;
         int k=start+f*bays+j;vec4 r0=O(k,0),r1=O(k,1);
         clearance=min(clearance,min(phRectDistance(s,r0),phRectDistance(s,r1)));
         rain=max(rain,max(phStain(s,r0,key),phStain(s,r1,key)));
     }}}
+#ifdef PCG_NATURAL
+    vec3 loc=p-vec3(M(id,12).xy,0.);
+    float n0=n28WorldNoise(loc*.21,key),n1=n28WorldNoise(loc*.77,key+17.);
+    float tint=M(id,10).x*(1.+age*(n0-.50)*.12+age*(n1-.50)*.035);
+    float damp=.21+.38*n28WorldNoise(vec3(loc.xy*.31,0),key+3.);
+    tint*=1.-age*(.15*rain+.22*exp(-max(s.y,0.)/damp));
+#else
     float n0=phNoise(vec2(s.x*.22,s.y*.23),key),n1=phNoise(vec2(s.x*1.6,s.y*.41),key+17.);
     float tint=M(id,10).x*(1.+age*(n0-.50)*.16+age*(n1-.50)*.08);
     tint*=1.-age*(.13*rain+.17*exp(-max(s.y,0.)/.36));
+#endif
     float floorZ=mod(max(s.y,0.),max(c.z,.01));int layer=int(a.y);float repeat=a.z;vec2 uv0=vec2(s.x,-s.y)/repeat;
     if(style==4&&bays>0&&clearance>.055){
         float du=abs(fract((s.x-c.x)/max(c.y,.01))-.5)*c.y;
@@ -181,7 +211,7 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
         // Opaque curtain-wall spandrels, not additional transparent windows.
         vec3 panel=vec3(.105,.155,.185)*tint;return brdf(panel,n,v,.31,.27,1.,p,direct)+phReflect(n,v,.32)*.055;
     }
-    return mat(layer,uv0,p,n,t,-up,v,direct,tint);
+    return phMaterial(layer,uv0,p,n,t,-up,v,direct,tint);
 }
 vec3 phSurface(int id,vec2 s,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct){
     vec4 a=M(id,0),prop=M(id,8),q=M(id,12);int role=int(q.z),layer=int(a.y);
@@ -200,9 +230,17 @@ vec3 phSurface(int id,vec2 s,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct){
     if(role==4&&abs(n.z)<.2)return brdf(mix(M(id,11).xyz,vec3(.48,.46,.41),.50)*tint,n,v,.76,0.,1.,p,direct);
     if(role==5&&layer==7)return brdf(mix(M(id,9).xyz,vec3(.55,.53,.47),.55)*tint,n,v,.68,0.,1.,p,direct);
     if(role==8)return brdf(mix(M(id,9).xyz,vec3(.27,.30,.30),.68)*tint,n,v,.47,.35,1.,p,direct);
-    return mat(layer,st,p,n,t,-b,v,direct,tint);
+    return phMaterial(layer,st,p,n,t,-b,v,direct,tint);
 }
-#ifndef PCG_PHOTOREAL_PROBE
+#if defined(PCG_NATURAL_PROBE)
+void main(){
+    int i=int(gl_FragCoord.x),j=int(gl_FragCoord.y);
+    vec3 p=vec3(float(i)-2.5,float(j)-1.5,0.5);vec3 d=normalize(vec3(float(j)-1.5,float(i)-2.5,0.35));
+    if(i>=6){p=vec3(float(j)-1.5,-2.,.5);d=i==6?vec3(0,1,0):vec3(0,-1,0);}
+    float t=n28Hit(p,d,vec3(-.75,-.60,.1),vec3(.85,.90,2.2));
+    color=vec4(t,d.xy,1.);
+}
+#elif !defined(PCG_PHOTOREAL_PROBE)
 void main(){
     vec4 a=M(rid,0);int kind=int(a.x),layer=int(a.y);vec3 n=normalize(gn),t=normalize(tangent),b=normalize(cross(n,t));vec3 v=perspective>.5?normalize(eye-world):normalize(viewDir);if(dot(n,v)<0.)n=-n;
     if(kind==3){vec4 c=texture(cutoutMaps,vec3(uv,float(layer)));
@@ -222,10 +260,17 @@ void main(){
             c=brdf(panel,n,v,.62,.03,.91,world,direct);
         }else{
             vec3 hp=o+tt*hit.x+nn*hit.y+vec3(0,0,hit.z);int face=int(hit.w+.5);vec3 back;
+#ifdef PCG_NATURAL
+            if(face==2)back=phWall(int(opt.x),hit.xz,hp,v,0.)*(night>.5?1.:.88);
+#else
             if(face==2)back=phWall(int(opt.x),hit.xz,hp,v,0.)*.83;
+#endif
             else if(face==4)back=mat(2,hit.xy/.8,hp,vec3(0,0,1),tt,nn,v,0.,.61);
             else if(face==5)back=vec3(.20,.20,.18)*irradiance;
             else back=phReflect(-n,v,.38)*.36;
+#ifdef PCG_NATURAL
+            if(face!=2)back+=n28Bounce(int(opt.x),lo,hi);
+#endif
             c=phGlass(back,n,v,0,.135,M(rid,8).z*.3);
         }
     }else if(kind==5){vec2 s=uv/M(rid,1).xy;bool front=M(rid,1).z>.5;vec3 base=vec3(.56,.58,.56);if(front&&s.x>.08&&s.x<.92&&s.y>.15&&s.y<.87){vec2 q=(s-vec2(.5,.51))*vec2(1.7,1.);float rr=length(q);if(rr<.34){float blades=.5+.5*cos(atan(q.y,q.x)*7.+rr*12.);base=vec3(.08)+vec3(.12)*blades;if(rr<.09)base=vec3(.29);}if(fract(s.y*28.)<.19)base*=.49;}c=brdf(base,n,v,.57,.1,1.,world,direct);}

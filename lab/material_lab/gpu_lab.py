@@ -119,7 +119,7 @@ layout(location=0) in vec3 p;layout(location=1) in vec2 st;layout(location=2) in
 uniform mat4 VP;out vec3 world;out vec2 uv;flat out int rid;flat out vec3 gn;flat out vec3 tangent;
 void main(){world=p;uv=st;rid=int(record+.5);gn=normal;tangent=tan;gl_Position=VP*vec4(p,1);}
 '''
-def fragment_source(photoreal=False,probe=False):
+def fragment_source(photoreal=False,probe=False,natural=False,natural_probe=False):
     base=(HERE/'renderer.glsl').read_text()
     defines=''
     if photoreal:
@@ -127,14 +127,23 @@ def fragment_source(photoreal=False,probe=False):
         assert base.count(marker)==1
         base=base.replace(marker,(HERE/'photoreal27.glsl').read_text())
         defines='#define PCG_PHOTOREAL 1\n'
+    if natural:
+        assert photoreal
+        marker='// PCG_NATURAL_INCLUDE'
+        assert base.count(marker)==1
+        base=base.replace(marker,(HERE/'natural28.glsl').read_text())
+        defines+='#define PCG_NATURAL 1\n'
+    if natural_probe:
+        assert natural and not probe
+        defines+='#define PCG_NATURAL_PROBE 1\n'
     if probe:
         assert photoreal
         defines+='#define PCG_PHOTOREAL_PROBE 1\n'
     return '#version 330 core\n'+defines+(HERE/'material_math.glsl').read_text()+base
 
 class GL:
-    def __init__(self,vertices,meta,ops,arrays,photoreal=False,cutout_mips=None):
-        self.p=gl('glCreateProgram',U)();frag=fragment_source(photoreal)
+    def __init__(self,vertices,meta,ops,arrays,photoreal=False,cutout_mips=None,natural=False,compact_materials=False):
+        self.p=gl('glCreateProgram',U)();frag=fragment_source(photoreal,natural=natural);self.compact_materials=compact_materials;self.material_storage={}
         for typ,s in ((0x8B31,VERT),(0x8B30,frag)):gl('glAttachShader',None,U,U)(self.p,shader(typ,s))
         gl('glLinkProgram',None,U)(self.p);v=I();gl('glGetProgramiv',None,U,U,P)(self.p,0x8B82,C.byref(v));assert v.value;gl('glUseProgram',None,U)(self.p)
         self.vao=gen('glGenVertexArrays');gl('glBindVertexArray',None,U)(self.vao);self.vbo=gen('glGenBuffers');gl('glBindBuffer',None,U,U)(0x8892,self.vbo);gl('glBufferData',None,U,C.c_ssize_t,P,U)(0x8892,vertices.nbytes,ptr(vertices),0x88E4)
@@ -168,7 +177,26 @@ class GL:
         if mip:gl('glGenerateMipmap',None,U)(0x0DE1)
         self.uniform(name,unit);return t
     def texarray(self,a,unit,name,mips=None):
-        a=np.ascontiguousarray(a,np.float32);l,h,w,c=a.shape;t=gen('glGenTextures');self.unit(unit,0x8C1A,t);gl('glTexImage3D',None,U,I,I,I,I,I,I,U,U,P)(0x8C1A,0,0x881A if c==4 else 0x881B,w,h,l,0,0x1908 if c==4 else 0x1907,0x1406,ptr(a));self.param(0x8C1A,0x2801,0x2703);self.param(0x8C1A,0x2800,0x2601);self.param(0x8C1A,0x2802,0x2901 if name not in ('roomMaps','cutoutMaps') or (name=='cutoutMaps' and mips is not None) else 0x812F);self.param(0x8C1A,0x2803,0x2901 if name not in ('roomMaps','cutoutMaps') else 0x812F)
+        a=np.ascontiguousarray(a,np.float32);l,h,w,c=a.shape;t=gen('glGenTextures');self.unit(unit,0x8C1A,t)
+        storage=0x881A if c==4 else 0x881B
+        compact=self.compact_materials and name in ('albedoMaps','normalMaps','ormMaps')
+        if compact:
+            assert mips is None
+            if name=='albedoMaps':
+                assert c==4
+                a=a.copy();x=np.clip(a[:,:,:,:3],0,1);a[:,:,:,:3]=np.where(x<=.0031308,12.92*x,1.055*x**(1/2.4)-.055);storage=0x8C43
+            else:
+                assert c==3;storage=0x8051
+        gl('glTexImage3D',None,U,I,I,I,I,I,I,U,U,P)(0x8C1A,0,storage,w,h,l,0,0x1908 if c==4 else 0x1907,0x1406,ptr(a))
+        if compact:
+            actual=I();query=gl('glGetTexLevelParameteriv',None,U,I,U,P);query(0x8C1A,0,0x1003,C.byref(actual));assert actual.value==storage
+            bits=[]
+            for token in (0x805C,0x805D,0x805E,0x805F):
+                q=I();query(0x8C1A,0,token,C.byref(q));bits.append(q.value)
+            assert bits==([8,8,8,8] if c==4 else [8,8,8,0])
+            pixels=sum(max(1,w>>i)*max(1,h>>i) for i in range(max(w,h).bit_length()))
+            self.material_storage[name]=dict(internal_format=hex(storage),component_bits=bits,layers=l,logical_bytes_with_mips=l*pixels*c,prior_fp16_logical_bytes_with_mips=l*pixels*c*2)
+        self.param(0x8C1A,0x2801,0x2703);self.param(0x8C1A,0x2800,0x2601);self.param(0x8C1A,0x2802,0x2901 if name not in ('roomMaps','cutoutMaps') or (name=='cutoutMaps' and mips is not None) else 0x812F);self.param(0x8C1A,0x2803,0x2901 if name not in ('roomMaps','cutoutMaps') else 0x812F)
         if mips is None:gl('glGenerateMipmap',None,U)(0x8C1A)
         else:
             assert name=='cutoutMaps' and np.array_equal(a,mips[0])

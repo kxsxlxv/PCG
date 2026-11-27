@@ -165,13 +165,13 @@ def render(source,out,near,lite,near_owner,lite_owner,meta,ops,records,prior):
     return rows,info,probe,iou,coverage
 
 
-def sheets(source,out,records):
+def sheets(source,out,records,labels=('26','27')):
     def compare(keys,name,cols,w,h):
         n=math.ceil(len(keys)/cols);sheet=Image.new('RGB',(cols*w,n*(h+22)*2),(235,237,239));d=ImageDraw.Draw(sheet)
         for i,k in enumerate(keys):
             x=i%cols*w;y=i//cols*(h+22)*2
             for j,root in enumerate((source,out)):
-                im=Image.open(root/(k+'.png')).convert('RGB');im.thumbnail((w,h));Y=y+j*(h+22);sheet.paste(im,(x+(w-im.width)//2,Y));d.text((x+4,Y+h+3),k+(' | 26' if j==0 else ' | 27'),fill='black')
+                im=Image.open(root/(k+'.png')).convert('RGB');im.thumbnail((w,h));Y=y+j*(h+22);sheet.paste(im,(x+(w-im.width)//2,Y));d.text((x+4,Y+h+3),k+' | '+labels[j],fill='black')
         sheet.save(out/(name+'.png'))
     ids=[r['id'] for r in records]
     for group in ('a','b','auto'):
