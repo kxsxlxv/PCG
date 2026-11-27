@@ -37,12 +37,14 @@ vec3 n28Reflect(vec3 n,vec3 v,float rough){
     }
     return c*vec3(.95,.99,1.02)*(night>.5?.072:1.);
 }
+uniform int externalPbrLayers;
 vec3 n28Material(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direct,float tint){
     float key=M(rid,8).w;vec3 a=texture(albedoMaps,vec3(q,float(layer))).rgb;
     vec3 orm=texture(ormMaps,vec3(q,float(layer))).rgb;
     vec3 tn=vec3(0,0,1);bool detailed=pixelsPerMeter>8.;
     if(detailed)tn=texture(normalMaps,vec3(q,float(layer))).rgb*2.-1.;
-    if(layer>=22&&layer<=27&&pixelsPerMeter>6.){
+    bool authored=layer>=16&&layer<36&&((externalPbrLayers & (1 << (layer-16)))!=0);
+    if(!authored&&layer>=22&&layer<=27&&pixelsPerMeter>6.){
         // Unstructured plaster/panel microtexture: independent phases with
         // smooth non-periodic metric weights. Never offset brick joints.
         float w=phNoise(q*.47+vec2(key*.019,key*.031),key+41.);
@@ -52,12 +54,12 @@ vec3 n28Material(int layer,vec2 q,vec3 p,vec3 n,vec3 t,vec3 b,vec3 v,float direc
             orm=mix(orm,texture(ormMaps,vec3(q+shift,float(layer))).rgb,w);
             tn=mix(tn,texture(normalMaps,vec3(q+shift,float(layer))).rgb*2.-1.,w);
         }
-    }else if(layer>=16&&layer<=18){
+    }else if(!authored&&layer>=16&&layer<=18){
         float row=floor(q.y*16.);vec2 xy=vec2(q.x*5.+.5*mod(row,2.),q.y*16.);
         vec2 f=fract(xy);float edge=min(min(f.x,1.-f.x),min(f.y,1.-f.y));
         float unit=phHash(dot(floor(xy),vec2(71.3,217.7))+key*13.);
         a*=1.+(unit-.5)*.28*smoothstep(.045,.13,edge)*smoothstep(6.,26.,pixelsPerMeter);
-    }else if(layer>=19&&layer<=21){
+    }else if(!authored&&layer>=19&&layer<=21){
         float cell=floor((layer==21?q.x:q.y)*8.);float unit=phHash(cell*71.3+key*13.);
         a*=1.+(unit-.5)*.19*smoothstep(5.,22.,pixelsPerMeter);
     }

@@ -159,6 +159,19 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           EGL_PLATFORM: surfaceless
         run: python lab/zero_natural_architecture.py /tmp/pcg_zero_tile_abi
+      - name: Reference PBR overlay on verified stage-28 geometry (synthetic only)
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_reference_assets.py --out artifacts/zero-reference-pbr
+      - name: Package replay source for private offline inputs
+        run: git archive --format=zip -o /tmp/pcg-stage29-replay.zip HEAD lab src assets/third_party
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage29-replay
+          path: /tmp/pcg-stage29-replay.zip
+          retention-days: 14
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src
