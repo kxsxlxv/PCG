@@ -141,6 +141,12 @@ jobs:
         env:
           PYTHONPATH: src
         run: python lab/zero_archetypes.py /tmp/pcg_zero_tile_abi
+      - name: Unified architectural details and PBR render for 36 buildings
+        env:
+          PYTHONPATH: src
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          EGL_PLATFORM: surfaceless
+        run: python lab/zero_unified_architecture.py /tmp/pcg_zero_tile_abi
       - name: Actual 1024-building export and bundle verification
         env:
           PYTHONPATH: src

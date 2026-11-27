@@ -107,12 +107,12 @@ def vertex_data(scene):
     return np.ascontiguousarray(np.column_stack((v,u,ids,np.repeat(n,3,axis=0),np.repeat(tt,3,axis=0))),np.float32)
 
 def norm(x):x=np.asarray(x,float);return x/np.linalg.norm(x)
-def camera(center,view,W,H,ppm,perspective=False):
+def camera(center,view,W,H,ppm,perspective=False,depth_span=200.):
     d=norm(view);right=norm(np.cross([0,0,1],d));up=np.cross(d,right);center=np.asarray(center,float)
     if perspective:
         dist=H/ppm/(2*np.tan(np.deg2rad(22.5)));eye=center+d*dist;V=np.eye(4);V[:3,:3]=[right,up,d];V[:3,3]=-V[:3,:3]@eye;near=.12;far=300.;f=1/np.tan(np.deg2rad(22.5));P=np.array([[f*H/W,0,0,0],[0,f,0,0],[0,0,-(far+near)/(far-near),-2*far*near/(far-near)],[0,0,-1,0]])
     else:
-        eye=center+d*200;V=np.eye(4);V[:3,:3]=[right,up,d];V[:3,3]=-V[:3,:3]@center;P=np.diag([2*ppm/W,2*ppm/H,-1/200,1])
+        eye=center+d*depth_span;V=np.eye(4);V[:3,:3]=[right,up,d];V[:3,3]=-V[:3,:3]@center;P=np.diag([2*ppm/W,2*ppm/H,-1/depth_span,1])
     return np.asarray(P@V,np.float32),eye,d
 VERT='''#version 330 core
 layout(location=0) in vec3 p;layout(location=1) in vec2 st;layout(location=2) in float record;layout(location=3) in vec3 normal;layout(location=4) in vec3 tan;
@@ -129,6 +129,15 @@ class GL:
             gl('glEnableVertexAttribArray',None,U)(i);gl('glVertexAttribPointer',None,U,I,U,C.c_ubyte,I,P)(i,n,0x1406,0,48,P(offset*4))
         self.count=len(vertices);gl('glEnable',None,U)(0x0B71);gl('glDisable',None,U)(0x0B44);gl('glDisable',None,U)(0x0BE2)
         a,n,r,m,room,e=arrays;self.tex2(meta,0,'metadata',False);self.tex2(ops,1,'openings',False);self.texarray(a,2,'albedoMaps');self.texarray(n,3,'normalMaps');self.texarray(r,4,'ormMaps');self.texarray(room,5,'roomMaps');self.tex2(e,6,'envMap',True,True);self.texarray(m,8,'cutoutMaps');self.shadow=2048;self.sfb,self.sd,_=self.framebuffer(self.shadow,self.shadow,True);self.unit(7,0x0DE1,self.sd);self.uniform('shadowMap',7);self.fbos={}
+    def replace_vertices(self,vertices):
+        # Shared metadata/maps remain resident. A different LOD or isolated
+        # building only replaces the triangle stream; legacy rendering unchanged.
+        vertices=np.ascontiguousarray(vertices,np.float32)
+        assert vertices.ndim==2 and vertices.shape[1]==12 and len(vertices)%3==0
+        gl('glBindBuffer',None,U,U)(0x8892,self.vbo)
+        gl('glBufferData',None,U,C.c_ssize_t,P,U)(0x8892,vertices.nbytes,ptr(vertices),0x88E4)
+        self.count=len(vertices)
+
     def uniform(self,name,x):
         loc=gl('glGetUniformLocation',I,U,B)(self.p,name.encode());
         if loc<0:return
@@ -159,12 +168,12 @@ class GL:
     def draw(self,fb,w,h):
         gl('glBindFramebuffer',None,U,U)(0x8D40,fb);gl('glViewport',None,I,I,I,I)(0,0,w,h);gl('glClearColor',None,F,F,F,F)(.50,.59,.70,0.);gl('glClear',None,U)(0x4000|0x100);gl('glDrawArrays',None,U,I,I)(4,0,self.count)
     def render(self,center,ppm,view,mode,res,info,perspective=False):
-        w,h=res;sun=norm([.5,-.7,.63]);night=mode=='night';suncol=np.array([3.,2.65,2.2]) if not night else np.array([.055,.065,.09]);ambient=np.array([.44,.49,.55]) if not night else np.array([.045,.055,.075]);sh,_,_=camera([61,6,11],sun,self.shadow,self.shadow,self.shadow/160.)
+        w,h=res;sun=norm([.5,-.7,.63]);night=mode=='night';suncol=np.array([3.,2.65,2.2]) if not night else np.array([.055,.065,.09]);ambient=np.array([.44,.49,.55]) if not night else np.array([.045,.055,.075]);shadow_center=getattr(self,'shadow_center',[61,6,11]);shadow_extent=getattr(self,'shadow_extent',160.);sh,_,_=camera(shadow_center,sun,self.shadow,self.shadow,self.shadow/shadow_extent,depth_span=max(200.,shadow_extent))
         for k,x in dict(VP=sh,shadowVP=sh,viewDir=sun,eye=[0,0,0],perspective=0.,sunDir=sun,sunColor=suncol,irradiance=ambient,night=float(night),pixelsPerMeter=float(ppm),roomSource=info['room_source'],lobbyLayer=info['lobby'].get(mode,-1),passShadow=1).items():self.uniform(k,x)
         self.unit(7,0x0DE1,0);self.draw(self.sfb,self.shadow,self.shadow);self.unit(7,0x0DE1,self.sd)
-        vp,eye,d=camera(center,view,w,h,ppm,perspective);self.uniform('VP',vp);self.uniform('eye',eye);self.uniform('viewDir',d);self.uniform('perspective',float(perspective));self.uniform('passShadow',0)
+        vp,eye,d=camera(center,view,w,h,ppm,perspective,depth_span=max(200.,shadow_extent));self.uniform('VP',vp);self.uniform('eye',eye);self.uniform('viewDir',d);self.uniform('perspective',float(perspective));self.uniform('passShadow',0)
         if (w,h) not in self.fbos:self.fbos[(w,h)]=self.framebuffer(w,h)
-        self.draw(self.fbos[(w,h)][0],w,h);a=np.empty((h,w,4),np.float32);gl('glReadPixels',None,I,I,I,I,U,U,P)(0,0,w,h,0x1908,0x1406,ptr(a));err=gl('glGetError',U)();assert err==0,hex(err);assert np.isfinite(a).all();a=a[::-1].copy();mask=a[:,:,3]>.5;assert mask.any();c=a[:,:,:3];c[~mask]=[.012,.020,.041] if night else [.50,.59,.70];c=np.maximum(c,0);x=c*(1.3 if night else 1.05);x=np.clip((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0,1);x=np.where(x<=.0031308,12.92*x,1.055*x**(1/2.4)-.055);im=Image.fromarray(np.uint8(x*255+.5));return im,dict(foreground_pixels=int(mask.sum()),hdr_max=float(c[mask].max()),hdr_mean=float(c[mask].mean()))
+        self.draw(self.fbos[(w,h)][0],w,h);a=np.empty((h,w,4),np.float32);gl('glReadPixels',None,I,I,I,I,U,U,P)(0,0,w,h,0x1908,0x1406,ptr(a));err=gl('glGetError',U)();assert err==0,hex(err);assert np.isfinite(a).all();a=a[::-1].copy();mask=a[:,:,3]>.5;assert mask.any();self.last_mask=mask.copy();c=a[:,:,:3];c[~mask]=[.012,.020,.041] if night else [.50,.59,.70];c=np.maximum(c,0);x=c*(1.3 if night else 1.05);x=np.clip((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0,1);x=np.where(x<=.0031308,12.92*x,1.055*x**(1/2.4)-.055);im=Image.fromarray(np.uint8(x*255+.5));return im,dict(foreground_pixels=int(mask.sum()),hdr_max=float(c[mask].max()),hdr_mean=float(c[mask].mean()))
 
 def run(source,materials,panelka,assets,out,private=None,hdr=None,quick=False):
     out.mkdir(parents=True,exist_ok=True);scene_io.P=source;scene,cells=scene_io.load_scene();meta,ops,models=build_metadata(scene,cells,source);assert len(models)==55 and len(scene[0])//3==4516
