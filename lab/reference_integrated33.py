@@ -1,6 +1,6 @@
 """Opt-in Stage33 material overlay on the actual accepted Stage32 exports.
 No host mesh, UV, PCGF data, cutout or original opening record is edited.
-The fourth opening texel is a research GPU sidecar, not native ABI.
+The fourth/fifth opening texels are a research GPU sidecar, not native ABI.
 """
 from pathlib import Path
 import argparse,hashlib,json,math,shutil
@@ -28,6 +28,30 @@ def crop_window(rough,ratio):
     if not .25<=a<=5. or not .07<=frac<=.98:return None
     return (x0,y0,x1,y1),float(a),frac
 
+def frame_palette(a,rough):
+    # Candidate frame color: pixels close to low-roughness region, not the
+    # brightest arbitrary facade pixel. Fallback is neutral.
+    import cv2
+    glass=(rough<32).astype(np.uint8)
+    width=max(2,min(10,min(glass.shape)//16))
+    ring=(cv2.dilate(glass,np.ones((width*2+1,width*2+1),np.uint8))>0)&(glass==0)&(rough>=45)
+    if ring.sum()<16:return [.50,.50,.48]
+    q=np.median(a[ring],axis=0)/255.
+    q=np.where(q<=.04045,q/12.92,((q+.055)/1.055)**2.4)
+    return np.clip(q,.10,.82).tolist()
+
+def wall_detail(maps):
+    import cv2
+    # Remove low-frequency shading/edge imprint from projected wall crop.
+    # Encode bounded high-pass residual around sRGB 0.5.
+    a=maps[0].astype(np.float32)/255
+    low=cv2.GaussianBlur(a,(0,0),max(3.,min(a.shape[:2])/12))
+    a=np.clip(.5+(a-low)*.40,.44,.56)
+    n=maps[1].astype(np.float32)/127.5-1.
+    n[:,:,:2]=np.clip(n[:,:,:2],-.35,.35)
+    n[:,:,2]=np.sqrt(np.maximum(.1,1.-(n[:,:,:2]**2).sum(2)))
+    return [np.rint(a*255).astype(np.uint8),np.rint((n+1)*127.5).astype(np.uint8),maps[2]]
+
 def bank(root):
     data=json.loads((root/'modules.json').read_text())
     imgs=[np.asarray(Image.open(root/(k+'.png')).convert('RGB')).copy() for k in ('albedo','normal','orm')]
@@ -44,7 +68,9 @@ def bank(root):
         else:
             if m.get('fallback') or (maps[2][:,:,1]<32).mean()>.02:continue
             aspect=1.;frac=float((maps[2][:,:,1]<32).mean())
-        catalog.append(dict(index=len(layers),source_module=m['id'],family=m['family'],kind=m['kind'],aspect=aspect,low_roughness_fraction=frac))
+        palette=frame_palette(maps[0],maps[2][:,:,1]) if m['kind']=='glazing_patch' else None
+        if m['kind']=='blind_wall':maps=wall_detail(maps)
+        catalog.append(dict(index=len(layers),source_module=m['id'],family=m['family'],kind=m['kind'],aspect=aspect,low_roughness_fraction=frac,frame_rgb=palette))
         layers.append(maps)
     assert len(layers)>0 and len({x['family'] for x in catalog if x['kind']=='glazing_patch'})>=3
     return layers,catalog
@@ -53,7 +79,7 @@ def assignments(meta,ops,table,catalog,base):
     # Original 3 vec4s are bitwise identical. Appended slot IDs are 1-based,
     # zero is opt-out. Host aliases use exactly the same slot addresses.
     assert ops.ndim==3 and ops.shape[1:]==(3,4)
-    ext=np.zeros((len(ops),4,4),np.float32);ext[:,:3]=ops
+    ext=np.zeros((len(ops),5,4),np.float32);ext[:,:3]=ops
     families=sorted({x['family'] for x in catalog if x['kind']=='glazing_patch'})
     by={k:[x for x in catalog if x['family']==k and x['kind']=='glazing_patch'] for k in families}
     walls={k:next((x for x in catalog if x['family']==k and x['kind']=='blind_wall'),None) for k in families}
@@ -80,7 +106,7 @@ def assignments(meta,ops,table,catalog,base):
                 if not candidates:continue
                 # Stable vertical stack, restricted to geometrically compatible apertures.
                 x=candidates[stable(bid,r.get('facade_id',j),bay)%len(candidates)]
-                ext[slot,3,0]=base+x['index']+1;count+=1
+                ext[slot,3,0]=base+x['index']+1;ext[slot,4,:3]=x.get('frame_rgb',[.50,.50,.48]);count+=1
                 buildings[bid]=buildings.get(bid,0)+1
     np.testing.assert_array_equal(ext[:,:3],ops)
     selected=ext[:,3,0]>0
@@ -108,6 +134,9 @@ def run(source,atlas,out):
     arrays,mips,info=ref.load_materials(out,None)
     base=len(arrays[0]);assert base==36
     append_arrays(arrays,layers)
+    for i,maps in enumerate(layers):
+        p=out/'donor_bank'/str(base+i);p.mkdir(parents=True)
+        for name,a in zip(('albedo','normal','orm'),maps):Image.fromarray(a).save(p/(name+'.png'))
     dump(out/'donor_layers.json',dict(base=base,layers=cat,source_atlas_manifest=atlas_files))
     old_report=json.loads((source/'report.json').read_text())
     rows=[];assignments_report=[];image_rows=[];closeups=[]
@@ -181,7 +210,7 @@ def run(source,atlas,out):
     assert sum(a['windows'] for a in assignments_report)>0 and sum(r['changed_pixels'] for r in rows)>0
     report=dict(schema='pcg.research.stage33-overlay.v1',source_verified_files=source_files,atlas_verified_files=atlas_files,donor_layers=len(cat),base_layers=base,
         assignments=assignments_report,cases=rows,closeups=closeups,extra_triangles=0,near_total=sum(r['near'] for r in rows),lite_total=sum(r['lite'] for r in rows),
-        limits=['Daytime ordinary window and opaque-wall overlay only; paired balconies, entry and roof materials unchanged.','Roughness-derived crops are hypotheses; no certified semantic segmentation.','No native ABI change; fourth GPU opening texel is a research sidecar.','Same Stage32 meshes, not new GIS building parts. No native UNIGINE runtime or performance evidence.'])
+        limits=['Daytime donor-informed procedural frames/glass and bounded wall detail; paired balconies, entry and roof materials unchanged.','Roughness-derived crops are hypotheses; no certified semantic segmentation.','No native ABI change; fourth/fifth GPU opening texels are a research sidecar.','Same Stage32 meshes, not new GIS building parts. No native UNIGINE runtime or performance evidence.'])
     dump(out/'report.json',report);dump(out/'bundle.json',{str(p.relative_to(out)):sha(p) for p in sorted(out.rglob('*')) if p.is_file() and p.name!='bundle.json'})
     print('INTEGRATED33',json.dumps(report),flush=True)
 

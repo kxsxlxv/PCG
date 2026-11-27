@@ -11,3 +11,10 @@ day/night closeups; identical day masks and byte-identical night closeups
 are required. The baseline and candidate use the same material bank and
 renderer, with an explicit uniform switch. This does not solve semantic
 classification, authoritative GIS building parts or native UNIGINE integration.
+
+Visual correction after initial 80% aperture-photo blend: rejected blurred frames
+and baked wall shadows. Donor RGB palette now affects actual procedural frame
+components; donor roughness, hue and a small normal perturbation affect only
+actual POM glass. Photo detail fades out above 40 pixels per aperture. Wall
+textures are bounded high-pass residuals sampled continuously in metric space,
+not per-cell full crops. Source-derived layers saved with output bundle.

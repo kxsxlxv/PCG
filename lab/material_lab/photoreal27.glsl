@@ -136,7 +136,7 @@ vec3 phEntry(vec2 q,vec2 size,int id,int role,vec3 p,vec3 t,vec3 up,vec3 n,vec3 
     if(handle)return brdf(vec3(.42,.41,.35),n,v,.32,.70,1.,p,direct);
     return brdf(a,n,v,role==6?.69:.58,0.,edge<.5?.71:1.,p,direct);
 }
-vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,float state,int id,vec3 p,vec3 t,vec3 up,vec3 n,vec3 v,float direct){
+vec3 phWindowDonor(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,float state,int id,vec3 p,vec3 t,vec3 up,vec3 n,vec3 v,float direct,int donor,vec3 donorFrame){
     vec2 size=rect.zw-rect.xy,q=(s-rect.xy)/size;vec2 ratio=clamp(vec2(dot(v,t),dot(v,up))/max(dot(v,n),.10),-5.,5.);
     if(role==4||role==6)return phEntry(q,size,id,role,p,t,up,n,v,direct);
     int typ=int(M(id,8).y);int semantic=role==3?2:int(M(id,8).x)==2?1:0;int layout0=int(M(id,7).x)%4;
@@ -151,6 +151,7 @@ vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,f
     vec4 hit=windowPOM(q,ratio,size,layout0,door,steps);int part=int(hit.w+.5);
     vec2 m=hit.xy*size;vec3 frame=M(id,9).xyz;
     if(quality){if(retrofit>.78)frame=mix(frame,vec3(.69,.70,.67),.74);else if(retrofit<.14)frame=mix(frame,vec3(.22,.15,.105),.62);}
+    if(donor>=0)frame=mix(frame,clamp(donorFrame,vec3(.10),vec3(.82)),.38);
     float e=min(min(m.x,size.x-m.x),min(m.y,size.y-m.y));
     if(role==3){ // glazed double entrance leaves, transom and push bars
         part=e<.065||abs(q.x-.5)*size.x<.045||abs(q.y-.81)*size.y<.033?2:3;
@@ -170,11 +171,35 @@ vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,f
             c=mix(c,linen*pleat,.80*mask);
         }
         c=phRoomLight(c,state,semantic);
-        float dirty=M(id,8).z*exp(-m.y/.17);return phGlass(c,n,v,typ,M(id,9).w+dirty*.07,dirty);
+        float dirty=M(id,8).z*exp(-m.y/.17);float rough=M(id,9).w+dirty*.07;
+        if(donor>=0){
+            // Preserve the actual POM pane, interior and reflection. A donor
+            // photograph is never used as a replacement frame or aperture.
+            vec2 st=clamp(vec2(q.x,1.-q.y),.015,.985);
+            vec3 a=texture(albedoMaps,vec3(st,float(donor))).rgb;
+            float r=texture(ormMaps,vec3(st,float(donor))).g;
+            float mask=1.-smoothstep(.10,.19,r);
+            float lum=dot(a,vec3(.2126,.7152,.0722));
+            vec3 hue=clamp((a+.025)/(lum+.025),vec3(.68),vec3(1.34));
+            c*=mix(vec3(1.),hue,.35*mask);
+            vec3 dn=textureNormal(donor,st,n,t,-up);
+            vec3 nn=normalize(mix(n,dn,.10*mask));
+            vec3 g=phGlass(c,nn,v,typ,mix(rough,clamp(r,.09,.28),.38*mask),dirty);
+            float px=pixelsPerMeter*max(size.x,size.y);
+            // Low-resolution photographic detail is distance limited, and
+            // never crosses the procedural glass mask.
+            float distant=1.-smoothstep(10.,40.,px);
+            vec3 photo=brdf(a,n,v,clamp(r,.10,.35),0.,1.,p,direct);
+            return mix(g,photo,.32*mask*distant);
+        }
+        return phGlass(c,n,v,typ,rough,dirty);
     }
     vec3 a=part==1?frame*.63:part==4?vec3(.37,.40,.40):part==5?frame*.75:frame;
     float grain=.97+.03*sin(m.y*390.+sin(m.x*47.));a*=grain;if(part==2&&e>.083&&e<.094)a*=.32;
     return brdf(a,n,v,part==4?.37:.55,part==4?.40:0.,part==1?.67:.94,p,direct);
+}
+vec3 phWindow(vec2 s,vec4 rect,vec4 roomRect,float roomSill,int role,float key,float state,int id,vec3 p,vec3 t,vec3 up,vec3 n,vec3 v,float direct){
+    return phWindowDonor(s,rect,roomRect,roomSill,role,key,state,id,p,t,up,n,v,direct,-1,vec3(0.));
 }
 float phRectDistance(vec2 s,vec4 r){
     if(r.z<=r.x||r.w<=r.y)return 1e5;
@@ -194,20 +219,12 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
     if(valid){rect=O(slot,0);other=O(slot,1);data=O(slot,2);vec4 joint=rect;
         if(data.y>0.)joint=vec4(min(rect.xy,other.xy),max(rect.zw,other.zw));float sill=data.x==2?.17:dims.z;
         if(phContains(s,rect)){
-            vec3 original=phWindow(s,rect,joint,sill,int(data.x),data.z,data.w,id,p,t,up,n,v,direct);
-            // Only ordinary unpaired windows; the original opening lookup is
-            // authoritative. No new aperture, no changes to night occupancy.
+            int donor=-1;vec3 palette=vec3(0.);
             if(q33Enabled==1&&night<.5&&data.x==1.&&data.y==0.){
-                int donor=int(O(slot,3).x)-1;
-                if(donor>=0){
-                    vec2 q=(s-rect.xy)/(rect.zw-rect.xy);
-                    float edge=min(min(q.x,1.-q.x),min(q.y,1.-q.y));
-                    vec2 st=clamp(vec2(q.x,1.-q.y),.015,.985);
-                    vec3 sampleColor=matTint(donor,st,p,n,t,-up,v,direct,vec3(1.));
-                    return mix(original,sampleColor,.80*smoothstep(.018,.075,edge));
-                }
+                donor=int(O(slot,3).x)-1;
+                palette=O(slot,4).rgb;
             }
-            return original;
+            return phWindowDonor(s,rect,joint,sill,int(data.x),data.z,data.w,id,p,t,up,n,v,direct,donor,palette);
         }
         if(phContains(s,other))return phWindow(s,other,joint,sill,int(data.y),data.z,data.w,id,p,t,up,n,v,direct);
     }
@@ -292,13 +309,15 @@ vec3 phWall(int id,vec2 s,vec3 p,vec3 v,float direct){
     if(q33Enabled==1&&night<.5&&valid&&s.y>.55&&clearance>.08){
         int donor=int(O(slot,3).y)-1;
         if(donor>=0){
-            vec2 q=vec2((s.x-c.x)/max(c.y,.01)-float(bay)+.5,1.-floorZ/max(c.z,.01));
-            float edge=min(min(q.x,1.-q.x),min(q.y,1.-q.y));
-            vec2 st=clamp(q,.015,.985);
+            // Use only bounded high-frequency material detail, continuously
+            // in metric coordinates. No baked window-sized shadow stamps.
+            vec2 st=vec2(s.x,-s.y)/1.35;
             float rough=texture(ormMaps,vec3(st,float(donor))).g;
-            float w=.52*smoothstep(.03,.13,edge)*smoothstep(.08,.20,clearance)*smoothstep(.20,.36,rough);
-            vec3 d=matTint(donor,st,p,n,t,-up,v,direct,vec3(tint));
-            return mix(original,d,w);
+            float w=.50*smoothstep(.08,.24,clearance)*smoothstep(.25,.42,rough);
+            vec3 residual=clamp(texture(albedoMaps,vec3(st,float(donor))).rgb/.214041,vec3(.80),vec3(1.20));
+            vec3 nn=normalize(mix(n,textureNormal(donor,st,n,t,-up),.15));
+            vec3 detail=phMaterialTint(layer,uv0,p,nn,t,-up,v,direct,tint*accent*residual);
+            return mix(original,detail,w);
         }
     }
     return original;
