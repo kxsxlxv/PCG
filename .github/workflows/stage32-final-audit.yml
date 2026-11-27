@@ -1,0 +1,86 @@
+name: PCG Stage 32 independent final artifact audit
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage32-final-audit.yml
+permissions:
+  actions: read
+  contents: read
+jobs:
+  audit:
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Fetch and authenticate completed exact-source CI artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46024126624
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          done_run=false
+          for i in $(seq 1 200); do
+            curl -fsS "${auth[@]}" "$api" -o "$RUNNER_TEMP/source.json"
+            test "$(jq -r .head_sha "$RUNNER_TEMP/source.json")" = 459863c4b3d8e575811600bd058f5a7da3d29557
+            if test "$(jq -r .status "$RUNNER_TEMP/source.json")" = completed; then
+              test "$(jq -r .conclusion "$RUNNER_TEMP/source.json")" = success
+              done_run=true
+              break
+            fi
+            sleep 5
+          done
+          test "$done_run" = true
+          curl -fsS "${auth[@]}" "$api/artifacts?name=pcg-visual-lab" -o "$RUNNER_TEMP/artifact.json"
+          test "$(jq -r '.artifacts | length' "$RUNNER_TEMP/artifact.json")" = 1
+          id=$(jq -r '.artifacts[0].id' "$RUNNER_TEMP/artifact.json")
+          digest=$(jq -r '.artifacts[0].digest' "$RUNNER_TEMP/artifact.json")
+          echo "SOURCE_ARTIFACT $id $digest"
+          curl -fLsS --retry 2 "${auth[@]}" "https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/$id/zip" -o "$RUNNER_TEMP/stage32.zip"
+          echo "${digest#sha256:}  $RUNNER_TEMP/stage32.zip" | sha256sum -c
+          curl -fsS "${auth[@]}" "https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46023789709/artifacts?name=pcg-stage32-visual-replay" -o "$RUNNER_TEMP/replay.json"
+          test "$(jq -r '.artifacts[0].id' "$RUNNER_TEMP/replay.json")" = 15210528198
+          digest=$(jq -r '.artifacts[0].digest' "$RUNNER_TEMP/replay.json")
+          curl -fLsS --retry 2 "${auth[@]}" "https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15210528198/zip" -o "$RUNNER_TEMP/replay.zip"
+          echo "${digest#sha256:}  $RUNNER_TEMP/replay.zip" | sha256sum -c
+      - name: Install image decoder
+        run: python -m pip install Pillow==12.3.0
+      - name: Verify all stage files and compare against visual replay
+        run: |
+          python - <<'PY'
+          import base64, hashlib, io, json, os, zipfile
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          root=Path(os.environ['RUNNER_TEMP'])
+          with zipfile.ZipFile(root/'stage32.zip') as z, zipfile.ZipFile(root/'replay.zip') as replay:
+              prefix=next(n[:-len('bundle.json')] for n in z.namelist() if n.endswith('zero-efficient-grammar/bundle.json'))
+              manifest=json.loads(z.read(prefix+'bundle.json'))
+              replay_manifest=json.loads(replay.read('bundle.json'))
+              for path,digest in manifest.items():assert hashlib.sha256(z.read(prefix+path)).hexdigest()==digest,path
+              for path,digest in replay_manifest.items():assert hashlib.sha256(replay.read(path)).hexdigest()==digest,path
+              r=json.loads(z.read(prefix+'report.json'));rr=json.loads(replay.read('report.json'))
+              for k in ('near_total','lite_total','legacy_near_total','legacy_lite_total','near_max','compact_saved','savings_fraction'):
+                  assert r[k]==rr[k],k
+              pngs=[p for p in manifest if p.endswith('.png') and '/' not in p]
+              same=sum(manifest[p]==replay_manifest.get(p) for p in pngs)
+              print('FINAL32_AUDIT',json.dumps(dict(verified_files=len(manifest),verified_replay_files=len(replay_manifest),png_identical=same,png_total=len(pngs),near=r['near_total'],lite=r['lite_total'],max_near=r['near_max'],savings=r['savings_fraction'],min_iou=min(v['near_lite_iou'] for v in r['views']),probe=r['quantization']['quality32'])),flush=True)
+              def emit(im,key):
+                  im.thumbnail((1280,1100))
+                  b=io.BytesIO();im.save(b,format='JPEG',quality=84,optimize=True)
+                  s=base64.b64encode(b.getvalue()).decode('ascii')
+                  print('FINAL32_IMAGE_BEGIN',key,len(s),flush=True)
+                  for i in range(0,len(s),2048):print('FINAL32_IMAGE_CHUNK',key,s[i:i+2048],flush=True)
+                  print('FINAL32_IMAGE_END',key,flush=True)
+              for i in range(2):
+                  im=Image.open(io.BytesIO(z.read(prefix+f'comparison_{i}.png'))).convert('RGB')
+                  for j in range(2):emit(im.crop((0,j*1144,im.width,min((j+1)*1144,im.height))),f'sheet{i}_{j}')
+              for name in ('walkup_sections_0','tall_bay_tower_1'):
+                  sheet=Image.new('RGB',(1280,1008),(235,237,239));d=ImageDraw.Draw(sheet)
+                  for i,mode in enumerate(('detail','night')):
+                      for j,stage in enumerate(('31','32')):
+                          im=Image.open(io.BytesIO(z.read(prefix+f'{name}_{mode}_{stage}.png'))).convert('RGB')
+                          im.thumbnail((640,480));sheet.paste(im,(j*640,i*504));d.text((j*640+8,i*504+482),f'{name} | {mode} | stage {stage}',fill='black')
+                  emit(sheet,name)
+          PY
