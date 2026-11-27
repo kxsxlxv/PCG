@@ -1,0 +1,99 @@
+name: PCG Stage 32 matched visual replay
+on:
+  push:
+    branches:
+      - research/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/stage32-visual-replay.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    if: github.repository == 'kxsxlxv/PCG' && github.ref == 'refs/heads/research/self-hosted-runner-smoke'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: src
+      MPLBACKEND: Agg
+      PYTHONHASHSEED: "0"
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      EGL_PLATFORM: surfaceless
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 459863c4b3d8e575811600bd058f5a7da3d29557
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch and verify exact Stage 31 input artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 459863c4b3d8e575811600bd058f5a7da3d29557
+          api=https://api.github.com/repos/kxsxlxv/PCG/actions/runs/46019490755
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          curl -fsS "${auth[@]}" "$api" -o "$RUNNER_TEMP/run.json"
+          test "$(jq -r .head_sha "$RUNNER_TEMP/run.json")" = e0c31ab003a6d9cb9e9d024166d9effe652187f7
+          test "$(jq -r .conclusion "$RUNNER_TEMP/run.json")" = success
+          curl -fLsS --retry 2 "${auth[@]}" "https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15207719665/zip" -o "$RUNNER_TEMP/stage31.zip"
+          echo "b838556b1e1b8df26a42540861f3f3ffcd90483e0a764b3837e5e7e4d9a6e0da  $RUNNER_TEMP/stage31.zip" | sha256sum -c
+          python - <<'PY'
+          import hashlib,json,os,zipfile
+          from pathlib import Path
+          with zipfile.ZipFile(Path(os.environ['RUNNER_TEMP'])/'stage31.zip') as z:
+              for n in z.namelist():
+                  p=Path(n)
+                  if p.is_absolute() or '..' in p.parts:raise ValueError(n)
+                  if p.parts[0] in ('zero-natural-architecture','l4-material-uv') and not n.endswith('/'):
+                      target=Path('artifacts')/p;target.parent.mkdir(parents=True,exist_ok=True)
+                      target.write_bytes(z.read(n))
+          root=Path('artifacts/zero-natural-architecture')
+          manifest=json.loads((root/'bundle.json').read_text())
+          for name,digest in manifest.items():assert hashlib.sha256((root/name).read_bytes()).hexdigest()==digest,name
+          print('STAGE31_INPUT_VERIFIED',len(manifest))
+          PY
+      - name: Install dependencies and compile ABI reader
+        run: |
+          python -m pip install -r lab/requirements.txt
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libegl-dev libgl1 libgl1-mesa-dri
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror lab/zero_tile_abi_check.cpp -o /tmp/pcg_zero_tile_abi
+          python -m unittest discover -s tests/unit -v
+      - name: Matched Stage 31 and 32 actual exported geometry and PBR
+        run: |
+          python lab/zero_reference_grammar.py /tmp/pcg_zero_tile_abi --efficient --out artifacts/zero-efficient-grammar
+          python lab/quality_stress32.py
+      - name: Actual visual comparisons and closeups
+        run: |
+          python lab/volume_review.py artifacts/zero-efficient-grammar
+          python - <<'PY'
+          import base64,hashlib,io,json
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          root=Path('artifacts/zero-efficient-grammar');manifest=json.loads((root/'bundle.json').read_text())
+          for p,h in manifest.items():assert hashlib.sha256((root/p).read_bytes()).hexdigest()==h,p
+          for name in ('walkup_sections_0','section_slab_0','tower_stacks_0','pitched_residential_0','tall_bay_tower_1'):
+              sheet=Image.new('RGB',(1280,2*504),(235,237,239));d=ImageDraw.Draw(sheet)
+              for i,mode in enumerate(('detail','night')):
+                  for j,stage in enumerate(('31','32')):
+                      p=root/f'{name}_{mode}_{stage}.png';im=Image.open(p).convert('RGB');assert im.size==(1280,960)
+                      im.thumbnail((640,480));sheet.paste(im,(j*640,i*504));d.text((j*640+8,i*504+482),f'{name} | {mode} | stage {stage}',fill='black')
+              b=io.BytesIO();sheet.save(b,format='JPEG',quality=84,optimize=True);s=base64.b64encode(b.getvalue()).decode()
+              print('QUALITY_IMAGE_BEGIN',name,len(s),flush=True)
+              for k in range(0,len(s),2048):print('QUALITY_IMAGE_CHUNK',name,s[k:k+2048],flush=True)
+              print('QUALITY_IMAGE_END',name,flush=True)
+              sheet.save(root/(name+'_detail_comparison.png'))
+          r=json.loads((root/'report.json').read_text())
+          print('QUALITY_AUDIT',json.dumps(dict(verified=len(manifest),near=r['near_total'],lite=r['lite_total'],baseline_near=r['legacy_near_total'],baseline_lite=r['legacy_lite_total'],max_near=r['near_max'],min_iou=min(v['near_lite_iou'] for v in r['views']),saved=r['compact_saved'],savings=r['savings_fraction'],equipment=[(x['stage29']['accepted'],x['stage29']['total']) for x in r['refinements']],probe=r['quantization']['quality32'],cases=[(x['id'],x['legacy']['near'],x['grammar']['near'],x['grammar']['lite']) for x in r['cases']])),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pcg-stage32-visual-replay
+          path: artifacts/zero-efficient-grammar
+          if-no-files-found: error
+          retention-days: 14
