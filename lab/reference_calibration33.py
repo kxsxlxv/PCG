@@ -137,8 +137,10 @@ def run(source,atlas,measured,out,decoder):
         dst=out/f'grammar_{variant}';scene=ref.compile_case(specs,'efficient',dst,decoder,calibration=cal)
         table=json.loads((dst/'parameters.json').read_text());prev_table=json.loads((source/f'grammar_{variant}'/'parameters.json').read_text())
         previous=json.loads((source/f'grammar_{variant}'/'plans.json').read_text())
+        assert len(previous)==len(scene['records'])
         for a,b in zip(previous,scene['records']):
-            assert a['footprint']==b['footprint'] and a['decision']['top_m']==b['decision']['top_m'] and a['decision']['eave_m']==b['decision']['eave_m']
+            assert a['id']==b['id']
+            assert json.dumps(a['footprint'],sort_keys=True)==json.dumps(b['footprint'],sort_keys=True) and a['decision']['top_m']==b['decision']['top_m'] and a['decision']['eave_m']==b['decision']['eave_m'],(a['id'],b['id'])
         ext,stats=assignments(scene['meta'],scene['ops'],table,cat,base,families)
         rev,stats2=assignments(scene['meta'],scene['ops'],list(reversed(table)),cat,base,families);np.testing.assert_array_equal(ext,rev);assert stats==stats2
         np.savez_compressed(dst/'donor_opening_sidecar.npz',openings=ext)
@@ -167,7 +169,7 @@ def run(source,atlas,measured,out,decoder):
             rec=next(r for r in scene['records'] if r['id']==key);prev=next(r for r in previous if r['id']==key)
             def geom(r):
                 q=r['reference_grammar']
-                return dict(projections=q['projections'],roof_cores=q['roof_cores'],entries=q['entries'])
+                return json.dumps(dict(projections=q['projections'],roof_cores=q['roof_cores'],entries=q['entries']),sort_keys=True)
             result.append(dict(id=key,calibrated=bid in cal,old_near=before['near'],near=after['near'],lite=after['lite'],old_lite=before['lite'],
                 old_openings=before['openings'],openings=after['openings'],old_projections=before['projections'],projections=after['projections'],
                 old_roof_cores=before['roof_cores'],roof_cores=after['roof_cores'],module_counts=after['module_counts'],near_lite_iou=iou,
