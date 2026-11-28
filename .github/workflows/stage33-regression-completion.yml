@@ -1,0 +1,79 @@
+name: PCG Stage 33 complete interrupted regression probes and audit
+on:
+  push:
+    branches: [research/self-hosted-runner-smoke]
+    paths: [.github/workflows/stage33-regression-completion.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  finish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      MPLBACKEND: Agg
+      PYTHONHASHSEED: "0"
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3f264b40d5d9c6efb8eee7788ed2c495f58bd2e5
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install same canonical probe dependencies
+        run: python -m pip install -r lab/requirements.txt
+      - name: Run exact interrupted canonical research probes
+        run: python lab/run_probes.py
+      - name: Download verified regression archive and baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          curl -fLsS --retry 2 "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15259291958/zip -o "$RUNNER_TEMP/regression.zip"
+          echo "385f8314978be4f5b28a7d61b4ed7991c4ef9e5b5ab83cb86172b9adbb39fbb8  $RUNNER_TEMP/regression.zip" | sha256sum -c
+          curl -fLsS --retry 2 "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15210528198/zip -o "$RUNNER_TEMP/baseline.zip"
+          echo "a1754547788b4a503b59ba00647a912fd51672ad0b5e8cdda654b618d2200747  $RUNNER_TEMP/baseline.zip" | sha256sum -c
+      - name: Verify all Stage32 manifest files and exact baseline pixels
+        run: |
+          python - <<'PY'
+          import hashlib,io,json,os,zipfile
+          from pathlib import Path
+          import numpy as np
+          from PIL import Image
+          root=Path(os.environ['RUNNER_TEMP'])
+          with zipfile.ZipFile(root/'regression.zip') as a,zipfile.ZipFile(root/'baseline.zip') as b:
+              prefix='zero-efficient-grammar/'
+              ma=json.loads(a.read(prefix+'bundle.json'));mb=json.loads(b.read('bundle.json'))
+              for z,m,p in ((a,ma,prefix),(b,mb,'')):
+                  for name,h in m.items():assert hashlib.sha256(z.read(p+name)).hexdigest()==h,name
+              x=json.loads(a.read(prefix+'report.json'));y=json.loads(b.read('report.json'))
+              assert x['near_total']==y['near_total']==17094 and x['lite_total']==y['lite_total']==13334
+              assert x['near_max']==y['near_max']==1764
+              count=0;geometry=0
+              for name in mb:
+                  if name.endswith(('.glb','facade_params.bin','facade_cells.bin','gpu_metadata.npz')):
+                      assert ma[name]==mb[name],name
+                      geometry+=1
+                  if name.endswith('_grammar.png'):
+                      p=np.asarray(Image.open(io.BytesIO(a.read(prefix+name))).convert('RGB'))
+                      q=np.asarray(Image.open(io.BytesIO(b.read(name))).convert('RGB'))
+                      np.testing.assert_array_equal(p,q);count+=1
+              assert count==16
+              report=dict(verified_regression_files=len(ma),verified_baseline_files=len(mb),identical_geometry_abi_files=geometry,identical_overview_images=count)
+              Path('artifacts/regression_completion_audit.json').write_text(json.dumps(report,indent=2))
+              print('REGRESSION33_COMPLETION',json.dumps(report))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pcg-stage33-regression-completion
+          path: artifacts/
+          retention-days: 14
+          if-no-files-found: warn
