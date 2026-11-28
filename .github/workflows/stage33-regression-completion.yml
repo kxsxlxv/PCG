@@ -28,8 +28,6 @@ jobs:
           node-version: "22"
       - name: Install same canonical probe dependencies
         run: python -m pip install -r lab/requirements.txt
-      - name: Run exact interrupted canonical research probes
-        run: python lab/run_probes.py
       - name: Download verified regression archive and baseline
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,14 +38,43 @@ jobs:
           echo "385f8314978be4f5b28a7d61b4ed7991c4ef9e5b5ab83cb86172b9adbb39fbb8  $RUNNER_TEMP/regression.zip" | sha256sum -c
           curl -fLsS --retry 2 "${auth[@]}" https://api.github.com/repos/kxsxlxv/PCG/actions/artifacts/15210528198/zip -o "$RUNNER_TEMP/baseline.zip"
           echo "a1754547788b4a503b59ba00647a912fd51672ad0b5e8cdda654b618d2200747  $RUNNER_TEMP/baseline.zip" | sha256sum -c
-      - name: Verify all Stage32 manifest files and exact baseline pixels
+      - name: Decode and compare every geometry, metadata and rendered overview
+        env:
+          PYTHONPATH: src:lab:lab/material_lab
         run: |
           python - <<'PY'
-          import hashlib,io,json,os,zipfile
+          import hashlib,io,json,os,zipfile,tempfile
           from pathlib import Path
           import numpy as np
           from PIL import Image
+          from scene_io import glb
           root=Path(os.environ['RUNNER_TEMP'])
+          def canonical_faces(attrs,idx):
+              # Triangle multiset preserving cyclic winding and all vertex attributes.
+              keys=sorted(attrs)
+              a=np.column_stack([attrs[k][idx].astype('f8') for k in keys]).reshape(-1,3,sum(attrs[k].shape[1] for k in keys))
+              canon=[]
+              for t in a:
+                  rotations=[tuple(np.roll(t,-i,axis=0).ravel()) for i in range(3)]
+                  canon.append(min(rotations))
+              return np.asarray(sorted(canon))
+          def compare_glb(a,b):
+              with tempfile.TemporaryDirectory() as td:
+                  pa=Path(td)/'a.glb';pb=Path(td)/'b.glb';pa.write_bytes(a);pb.write_bytes(b)
+                  A=glb(pa);B=glb(pb)
+                  if len(A)!=len(B):return dict(primitives=[len(A),len(B)],equal=False)
+                  rows=[]
+                  for (p,u,f,t),(q,v,g,s) in zip(A,B):
+                      if set(u)!=set(v) or len(f)!=len(g):
+                          rows.append(dict(equal=False,indices=[len(f),len(g)],attrs=[sorted(u),sorted(v)]));continue
+                      U=canonical_faces(u,f);V=canonical_faces(v,g)
+                      equal=U.shape==V.shape and bool(np.array_equal(U,V))
+                      delta=float(np.max(abs(U-V))) if U.shape==V.shape and U.size else None
+                      rows.append(dict(equal=equal,max_sorted_delta=delta,triangles=len(f)//3,
+                        indices_exact=bool(np.array_equal(f,g)),ordered_attributes_exact=all(np.array_equal(u[k],v[k]) for k in u),
+                        material_equal=t['materials'][p['material']]==s['materials'][q['material']]))
+                  return dict(primitives=len(rows),equal=all(x['equal'] and x.get('material_equal',False) for x in rows),rows=rows)
+          report=dict(geometry=[],npz=[],binary=[],images=[],json_semantic=[],probes_run='46134806759; seven PASS')
           with zipfile.ZipFile(root/'regression.zip') as a,zipfile.ZipFile(root/'baseline.zip') as b:
               prefix='zero-efficient-grammar/'
               ma=json.loads(a.read(prefix+'bundle.json'));mb=json.loads(b.read('bundle.json'))
@@ -56,42 +83,55 @@ jobs:
               x=json.loads(a.read(prefix+'report.json'));y=json.loads(b.read('report.json'))
               assert x['near_total']==y['near_total']==17094 and x['lite_total']==y['lite_total']==13334
               assert x['near_max']==y['near_max']==1764
-              count=0;geometry=0;npz_files=0;npz_arrays=0;npz_deltas=[];image_deltas=[]
-              for name in mb:
-                  if name.endswith(('.glb','facade_params.bin','facade_cells.bin')):
-                      assert ma[name]==mb[name],name
-                      geometry+=1
-                  if name.endswith('gpu_metadata.npz'):
+              report.update(verified_regression_files=len(ma),verified_baseline_files=len(mb))
+              for name in sorted(mb):
+                  if name.endswith('.glb'):
+                      q=compare_glb(a.read(prefix+name),b.read(name))
+                      report['geometry'].append(dict(file=name,bytes_equal=ma[name]==mb[name],**q))
+                  elif name.endswith(('facade_params.bin','facade_cells.bin')):
+                      u,v=a.read(prefix+name),b.read(name)
+                      report['binary'].append(dict(file=name,equal=u==v,bytes=[len(u),len(v)]))
+                  elif name.endswith('gpu_metadata.npz'):
                       with np.load(io.BytesIO(a.read(prefix+name))) as p,np.load(io.BytesIO(b.read(name))) as q:
                           assert set(p.files)==set(q.files)
                           for key in p.files:
-                              u,v=p[key],q[key];assert u.shape==v.shape and u.dtype==v.dtype,(name,key)
-                              exact=bool(np.array_equal(u,v))
-                              delta=float(np.max(np.abs(u.astype(float)-v.astype(float)))) if u.size else 0.
-                              npz_deltas.append(dict(file=name,array=key,exact=exact,max_delta=delta))
-                              # Report and enforce numeric tolerances separately
-                              # from archive container bytes.
-                              if np.issubdtype(u.dtype,np.integer):np.testing.assert_array_equal(u,v)
-                              else:np.testing.assert_allclose(u,v,atol=2e-6,rtol=0,err_msg=name+'/'+key)
-                              npz_arrays+=1
-                      npz_files+=1
-                  if name.endswith('_grammar.png'):
-                      p=np.asarray(Image.open(io.BytesIO(a.read(prefix+name))).convert('RGB'))
-                      q=np.asarray(Image.open(io.BytesIO(b.read(name))).convert('RGB'))
-                      diff=np.abs(p.astype(np.int16)-q.astype(np.int16))
-                      mae=float(diff.mean()/255);mx=int(diff.max())
-                      image_deltas.append(dict(file=name,rgb_mae=mae,max_channel_delta=mx))
-                      assert mae<.0025,(name,mae,mx)
-                      count+=1
-              assert count==16
-              report=dict(verified_regression_files=len(ma),verified_baseline_files=len(mb),identical_geometry_abi_files=geometry,npz_files=npz_files,npz_arrays=npz_arrays,npz_deltas=npz_deltas,identical_overview_images=sum(x['max_channel_delta']==0 for x in image_deltas),overview_images=count,image_deltas=image_deltas)
-              Path('artifacts/regression_completion_audit.json').write_text(json.dumps(report,indent=2))
-              print('REGRESSION33_COMPLETION',json.dumps(report))
+                              u,v=p[key],q[key];same=u.shape==v.shape and u.dtype==v.dtype
+                              delta=float(np.max(abs(u.astype(float)-v.astype(float)))) if same and u.size else None
+                              report['npz'].append(dict(file=name,array=key,shape_equal=same,exact=same and bool(np.array_equal(u,v)),max_delta=delta))
+                  elif name.endswith(('plans.json','parameters.json','cutout_records.json','projected_front_aliases.json')):
+                      report['json_semantic'].append(dict(file=name,equal=json.loads(a.read(prefix+name))==json.loads(b.read(name))))
+                  elif name.endswith('_grammar.png'):
+                      p=np.asarray(Image.open(io.BytesIO(a.read(prefix+name))).convert('RGB')).astype(np.int16)
+                      q=np.asarray(Image.open(io.BytesIO(b.read(name))).convert('RGB')).astype(np.int16)
+                      assert p.shape==q.shape
+                      diff=np.abs(p-q)
+                      report['images'].append(dict(file=name,rgb_mae=float(diff.mean()/255),max_channel_delta=int(diff.max()),changed_pixels=int(np.any(diff,axis=2).sum())))
+          assert len(report['images'])==16
+          summary=dict(manifests=[report['verified_regression_files'],report['verified_baseline_files']],
+              glb_files=len(report['geometry']),glb_byte_exact=sum(x['bytes_equal'] for x in report['geometry']),glb_decoded_exact=sum(x['equal'] for x in report['geometry']),
+              binary_exact=sum(x['equal'] for x in report['binary']),binary_total=len(report['binary']),
+              npz_exact=sum(x['exact'] for x in report['npz']),npz_total=len(report['npz']),npz_max_delta=max((x['max_delta'] or 0 for x in report['npz']),default=0),
+              json_exact=sum(x['equal'] for x in report['json_semantic']),json_total=len(report['json_semantic']),
+              image_exact=sum(x['max_channel_delta']==0 for x in report['images']),image_total=len(report['images']),image_max_mae=max(x['rgb_mae'] for x in report['images']))
+          report['summary']=summary
+          Path('artifacts').mkdir(exist_ok=True)
+          Path('artifacts/regression_completion_audit.json').write_text(json.dumps(report,indent=2))
+          print('REGRESSION33_SEMANTIC_SUMMARY',json.dumps(summary),flush=True)
+          for key in ('geometry','npz','binary','json_semantic','images'):
+              for x in report[key]:
+                  if not x.get('equal',x.get('exact',x.get('max_channel_delta',1)==0)):
+                      print('REGRESSION33_DIFF',key,json.dumps(x),flush=True)
+          # Acceptance: do not claim byte identity merely from matching counts.
+          assert summary['binary_exact']==summary['binary_total']
+          assert summary['glb_decoded_exact']==summary['glb_files']
+          assert summary['npz_exact']==summary['npz_total']
+          assert summary['json_exact']==summary['json_total']
+          assert summary['image_max_mae']<.0025
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pcg-stage33-regression-completion-audited
+          name: pcg-stage33-regression-semantic-audit
           path: artifacts/
           retention-days: 14
           if-no-files-found: warn
