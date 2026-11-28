@@ -75,7 +75,7 @@ def bank(root):
     assert len(layers)>0 and len({x['family'] for x in catalog if x['kind']=='glazing_patch'})>=3
     return layers,catalog
 
-def assignments(meta,ops,table,catalog,base):
+def assignments(meta,ops,table,catalog,base,families_by_building=None):
     # Original 3 vec4s are bitwise identical. Appended slot IDs are 1-based,
     # zero is opt-out. Host aliases use exactly the same slot addresses.
     assert ops.ndim==3 and ops.shape[1:]==(3,4)
@@ -89,7 +89,7 @@ def assignments(meta,ops,table,catalog,base):
         if r.get('role')!='wall' or meta[j,0,0]!=1 or meta[j,8,0]>=1.5:continue
         start,bays,floors,_=map(int,meta[j,1])
         if not bays or not floors:continue
-        bid=r['building'];key=families[stable(bid)%len(families)];pool=by[key]
+        bid=r['building'];key=(families_by_building or {}).get(bid,families[stable(bid)%len(families)]);assert key in by;pool=by[key]
         for z in range(floors):
             for bay in range(bays):
                 slot=start+z*bays+bay

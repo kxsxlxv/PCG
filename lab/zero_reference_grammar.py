@@ -56,13 +56,14 @@ def fixtures(variant):
         off=[float((i%3-1)*142),float((i//3-1)*86),0.]
         yield dict(id=f'{name}_{variant}',rule=name,footprint=f,floors=n,eave=eave,top=top,roof=roof,party=party,offset=off)
 
-def compile_case(specs,candidate,out,decoder):
+def compile_case(specs,candidate,out,decoder,calibration=None):
     out.mkdir(parents=True,exist_ok=True);uni.OUT=out
     cases=[];plans={};records=[];reference={};checks=0
     for s in sorted(specs,key=lambda x:x['id']):
         f=s['footprint'];bid=f.building_id;name=s['rule'];kw=dict(roof=s['roof'],eave=s['eave'],party_edges=s['party'])
         b=baseline(f,RULES[name],s['floors'],s['top'],**kw)
-        v,ref=build(f,name,s['floors'],s['top'],volume=candidate in ('volume','efficient'),**kw) if candidate else (b,None)
+        measured=None if calibration is None else calibration.get(bid)
+        v,ref=build(f,name,s['floors'],s['top'],volume=candidate in ('volume','efficient'),measured=measured,**kw) if candidate else (b,None)
         assert v.mass.shell==b.mass.shell and v.plan.footprint_digest==b.plan.footprint_digest==f.digest()
         assert v.top_m==s['top'] and v.eave_m==s['eave'] and v.mass.actual_roof==s['roof']
         assert tuple(v.plan.floor_levels)==tuple(b.plan.floor_levels)
@@ -73,7 +74,7 @@ def compile_case(specs,candidate,out,decoder):
         cases.append(c)
         # Replan the same input independently and compare every semantic intent.
         if ref:
-            vv,rr=build(f,name,s['floors'],s['top'],volume=candidate in ('volume','efficient'),**kw);assert vv.plan.digest()==v.plan.digest() and rr==ref
+            vv,rr=build(f,name,s['floors'],s['top'],volume=candidate in ('volume','efficient'),measured=measured,**kw);assert vv.plan.digest()==v.plan.digest() and rr==ref
         assert all(not w.openings for w in v.plan.facades if w.party)
     groups,table,cells,hosts=tile.compile_scene(cases,audit_samples=768)
     # Exact canonical host vertices and records are deterministic under input reorder.
